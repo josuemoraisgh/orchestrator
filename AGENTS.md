@@ -1,0 +1,56 @@
+# Production Orchestrator — Engineering Protocol
+
+This repository builds a generic VS Code extension that contributes the
+Orquestrador custom agent. The agent coordinates software production for any
+project through VS Code Chat, lich agent sessions, and ai-memory handoffs.
+
+## Start of work
+
+1. Read this file and the active product specification in `.ai/specs/`.
+2. Inspect the relevant extension sources, project status, and existing local
+   changes before editing.
+3. Use the workflows in `.ai/skills/` or the bundled skills under
+   `vscode-extension/skills/` as applicable.
+4. For cross-session or cross-agent continuity, use ai-memory when configured;
+   project requirements and decisions stay in `.ai/specs/`.
+
+## Engineering loop
+
+Work through request → source trace → smallest falsifiable hypothesis → useful
+experiment → evidence → minimal correction → build → relevant checks → review.
+State assumptions and distinguish measured results, source-proven facts, and
+inference. Preserve user changes and avoid unrelated edits.
+
+## Safety
+
+- Do not commit, push, reset, clean, or discard work unless explicitly asked.
+- Do not update repositories outside the workspace configuration.
+- Upstream synchronization is fast-forward-only. Stop on dirty or divergent
+  trees and preserve their contents.
+- Run project build commands only after synchronizing configured upstreams via
+  the extension workflow. Keep the resolved versions and hashes in release
+  metadata.
+- Ask for review before destructive operations, public releases, or changes
+  whose behavior cannot be established from the available project evidence.
+
+## Project memory layout
+
+Every initialized project uses:
+
+- `.ai/specs/` for product requirements, architecture decisions, and acceptance
+  gates local to that project.
+- `.ai/skills/` for reusable procedures that tell agents how to perform work.
+- ai-memory for searchable continuity and handoff across agent sessions and
+  projects.
+
+The project may add rules and skills; do not overwrite existing files during
+initialization or updates.
+
+## Release status
+
+Each extension release build must query the latest stable releases of lich and
+ai-memory, require the expected platform assets and SHA-256 digests, and record
+their exact versions, URLs, and digests in `vscode-extension/upstream-releases.json`.
+The extension installs only the pinned assets from its own package and verifies
+each downloaded archive before extraction. It must not execute an unverified
+installer or silently accept a missing digest.

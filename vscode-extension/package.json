@@ -1,0 +1,114 @@
+{
+  "name": "production-orchestrator",
+  "displayName": "Production Orchestrator",
+  "description": "A project-neutral coordinator for VS Code Chat, lich sessions, and ai-memory workflows.",
+  "version": "0.1.1",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": { "vscode": "^1.110.0" },
+  "categories": ["Other"],
+  "main": "./src/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "chatAgents": [
+      { "path": "./agents/orchestrator.agent.md" }
+    ],
+    "commands": [
+      { "command": "productionOrchestrator.initializeWorkspace", "title": "Orchestrator: Initialize Project Guidance" },
+      { "command": "productionOrchestrator.openSettings", "title": "Orchestrator: Open Settings" },
+      { "command": "productionOrchestrator.installDependencies", "title": "Orchestrator: Install or Update lich and ai-memory" },
+      { "command": "productionOrchestrator.checkTools", "title": "Orchestrator: Check lich and ai-memory" },
+      { "command": "productionOrchestrator.openChat", "title": "Orchestrator: Open in Chat" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "productionOrchestrator", "title": "Orquestrador", "icon": "./media/orchestrator.svg" }
+      ]
+    },
+    "views": {
+      "productionOrchestrator": [
+        { "id": "productionOrchestrator.settings", "name": "Configurações", "type": "webview" }
+      ]
+    },
+    "languageModelTools": [
+      {
+        "name": "productionOrchestrator.initialize_workspace",
+        "displayName": "Initialize project guidance",
+        "modelDescription": "Create the generic .ai/specs and .ai/skills structure and add the extension's reusable workflow skills without overwriting existing project files.",
+        "userDescription": "Add the orchestrator's generic project guidance.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "initializeProjectGuidance",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+      },
+      {
+        "name": "productionOrchestrator.install_dependencies",
+        "displayName": "Install or update orchestration dependencies",
+        "modelDescription": "Download the exact stable lich and ai-memory releases pinned in this extension build, verify their SHA-256 digests, install them under VS Code extension storage, then run ai-memory setup. This changes user-level agent integration and requires user confirmation.",
+        "userDescription": "Install or update the official lich and ai-memory releases.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "installOrchestratorDependencies",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+      },
+      {
+        "name": "productionOrchestrator.check_tools",
+        "displayName": "Check orchestrator tools",
+        "modelDescription": "Check whether lich and ai-memory are installed and report their versions/status. This is read-only.",
+        "userDescription": "Check lich and ai-memory availability.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "checkOrchestratorTools",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+      },
+      {
+        "name": "productionOrchestrator.list_lich_sessions",
+        "displayName": "List lich sessions",
+        "modelDescription": "List live lich coding-agent sessions for this workspace. Read-only.",
+        "userDescription": "Show available lich agent sessions.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "listLichSessions",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+      },
+      {
+        "name": "productionOrchestrator.delegate_lich_task",
+        "displayName": "Delegate a task with lich",
+        "modelDescription": "Open a specialist agent session in lich for this project, optionally in an isolated worktree. Use for a bounded independent task and report the created session. This changes local agent state and requires user confirmation.",
+        "userDescription": "Start a bounded task in a lich agent session.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "delegateWithLich",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "task": { "type": "string", "description": "A bounded task with a concrete expected result." },
+            "provider": { "type": "string", "description": "Installed lich provider, for example codex or claude." },
+            "worktree": { "type": "string", "description": "Optional new worktree branch name." }
+          },
+          "required": ["task", "provider"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "productionOrchestrator.sync_upstreams",
+        "displayName": "Sync configured upstreams",
+        "modelDescription": "Fast-forward only the upstream repositories listed in .ai/orchestrator.json. Refuses dirty repositories and never resets or force-updates. This changes local repositories and requires user confirmation.",
+        "userDescription": "Update declared upstream repositories before a build.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "syncProjectUpstreams",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+      },
+      {
+        "name": "productionOrchestrator.run_build",
+        "displayName": "Sync upstreams and build",
+        "modelDescription": "Synchronize configured upstream repositories first, then run the build command declared in .ai/orchestrator.json. Refuses to run when the project has no configured build command. This runs project code and requires user confirmation.",
+        "userDescription": "Sync declared upstreams and run the configured build.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "syncAndBuildProject",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+      }
+    ]
+  },
+  "scripts": {
+    "package": "node scripts/refresh-upstream-releases.js && npx @vscode/vsce package --allow-missing-repository",
+    "package:offline": "npx @vscode/vsce package --allow-missing-repository"
+  },
+  "dependencies": { "yauzl": "^3.2.0" },
+  "devDependencies": { "@vscode/vsce": "^3.2.2" }
+}

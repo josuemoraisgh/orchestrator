@@ -1,0 +1,27 @@
+{
+  "lich": {
+    "repository": "lichdotdev/lich",
+    "version": "v0.85.0",
+    "releaseUrl": "https://github.com/lichdotdev/lich/releases/tag/v0.85.0",
+    "publishedAt": "2026-11-04T21:08:20Z",
+    "windowsX64": {
+      "asset": "lich-v0.85.0-windows-amd64.zip",
+      "url": "https://github.com/lichdotdev/lich/releases/download/v0.85.0/lich-v0.85.0-windows-amd64.zip",
+      "sha256": "07002641aa0166a7234e43927d6ba0a735c820926c94f7110bc8d4307c6a1fbb",
+      "sizeBytes": 26695231
+    }
+  },
+  "aiMemory": {
+    "repository": "akitaonrails/ai-memory",
+    "version": "v3.4.2",
+    "releaseUrl": "https://github.com/akitaonrails/ai-memory/releases/tag/v3.4.2",
+    "publishedAt": "2026-11-05T15:24:11Z",
+    "windowsX64": {
+      "asset": "ai-memory-windows-x86_64.zip",
+      "url": "https://github.com/akitaonrails/ai-memory/releases/download/v3.4.2/ai-memory-windows-x86_64.zip",
+      "sha256": "df4db331663a08099dbb27864f362776ef560781a20cf206bb85555c24d9476e",
+      "sizeBytes": 26905472
+    }
+  },
+  "generatedAt": "2026-11-06T11:51:49.004Z"
+}

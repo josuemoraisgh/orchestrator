@@ -1,0 +1,12 @@
+.git/**
+.gitignore
+.vscode/**
+.vscode-test/**
+**/*.map
+**/*.ts
+scripts/**
+node_modules/**
+!node_modules/yauzl/**
+!node_modules/pend/**
+package-lock.json
+*.vsix
