@@ -1739,6 +1739,7 @@ function activate(context) {
         : task.executor === 'claude-code-cli'
           ? pollClaudeCodeTask(claudeSessions, taskJournal, task)
           : pollPlannedLichTask(context, task),
+    readDiff: task => inspectWorktreeChanges(task.projectPath, task.worktreePath),
     recordTaskJournal: (root, run, task, event) => taskJournal.record(root, run, task, event),
     readTaskJournal: (root, runId, taskId) => taskJournal.read(root, runId, taskId),
     createTaskHandoff: (root, input) => taskJournal.createHandoff(root, input),

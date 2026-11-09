@@ -57,10 +57,55 @@ test('review feedback cannot exceed the configured attempt limit', async () => {
   assert.equal(prompted, false);
 });
 
+test('line-specific review comment is validated, recorded, and forwarded to the retry', async () => {
+  const task = { id: 'task-1', title: 'Validate input', status: 'awaitingReview', attempts: 1, worktreePath: 'C:/project/.worktrees/task-1', history: [] };
+  const run = { id: 'run-1', tasks: [task] };
+  let savedRuns = [run];
+  const prompts = ['src/input.js:5', 'Reject empty input before accessing length.'];
+  vscode.window.showInputBox = async () => prompts.shift();
+  let retryArgs;
+  let journalEvent;
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => savedRuns || fallback, update: async (_key, value) => { savedRuns = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project', config: { orchestration: { maxAttempts: 3 } } });
+  view.taskActions = { readDiff: async () => ({ verified: true, diffTruncated: false, diffPreview: [
+    'diff --git a/src/input.js b/src/input.js', '--- a/src/input.js', '+++ b/src/input.js', '@@ -4,2 +4,3 @@', ' context', '+  if (value.length === 0) return false;', ' context'
+  ].join('\n') }) };
+  view.recordTaskJournal = async (_root, _run, _task, event) => { journalEvent = event; return true; };
+  view.retryTask = async (...args) => { retryArgs = args; };
+
+  await view.requestTaskLineComment('run-1', 'task-1');
+
+  assert.equal(journalEvent, 'review-line-comment');
+  assert.deepEqual(task.history[0], {
+    at: task.history[0].at, event: 'review-line-comment', path: 'src/input.js', line: 5,
+    detail: 'Reject empty input before accessing length.'
+  });
+  assert.equal(task.status, 'blocked');
+  assert.deepEqual(retryArgs, ['run-1', 'task-1', 'Comentário de revisão na linha src/input.js:5:\nReject empty input before accessing length.']);
+});
+
+test('line-specific review rejects a line outside the verified diff without retrying', async () => {
+  const task = { id: 'task-1', title: 'Validate input', status: 'awaitingReview', attempts: 1, worktreePath: 'C:/project/.worktrees/task-1', history: [] };
+  const run = { id: 'run-1', tasks: [task] };
+  vscode.window.showInputBox = async () => 'src/input.js:99';
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: () => [run] } };
+  view.getState = async () => ({ workspace: 'C:/project', config: { orchestration: { maxAttempts: 3 } } });
+  view.taskActions = { readDiff: async () => ({ verified: true, diffPreview: '--- a/src/input.js\n+++ b/src/input.js\n@@ -1 +1,2 @@\n+added', diffTruncated: false }) };
+  let retried = false;
+  view.retryTask = async () => { retried = true; };
+
+  await assert.rejects(view.requestTaskLineComment('run-1', 'task-1'), /não é uma linha adicionada/);
+  assert.equal(retried, false);
+});
+
 test('Orchestrator review UI exposes the corrective feedback action', () => {
   const view = Object.create(OrchestratorHomeView.prototype);
   const html = view.html({ cspSource: 'vscode-webview://test' });
   assert.match(html, /Solicitar ajustes ao agente/);
+  assert.match(html, /Comentar linha do diff/);
+  assert.match(html, /requestTaskLineComment/);
   assert.match(html, /requestTaskChanges/);
   assert.match(html, /Cancelar tarefa/);
   assert.match(html, /cancelTask/);
