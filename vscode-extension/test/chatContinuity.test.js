@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createContinuityAnchor, buildContinuityContext } = require('../src/chatContinuity');
+const { createContinuityAnchor, buildContinuityContext, sanitizeThreadForStorage } = require('../src/chatContinuity');
 
 test('continuity anchor retains the original objective and latest confirmed task state', () => {
   const thread = {
@@ -54,4 +54,21 @@ test('existing anchors keep the first objective if old transcript messages are n
 
   const anchor = createContinuityAnchor(thread, []);
   assert.equal(anchor.originalObjective, 'Original goal retained before compaction.');
+});
+
+test('persisted chat messages and continuity anchors redact credentials before storage', () => {
+  const thread = sanitizeThreadForStorage({
+    id: 'thread-secret', title: 'API key sk-ant-abcdefghijklmnop', updatedAt: 1,
+    messages: [
+      { role: 'user', text: 'Configure api_key="quoted secret value" and continue.' },
+      { role: 'assistant', text: 'Bearer abcdef0123456789 is not retained.' }
+    ],
+    continuity: { version: 1, originalObjective: 'Use token: ghp_abcdefghijklmnopqrstuvwxyz123456 to deploy.' }
+  });
+
+  const storedText = JSON.stringify(thread);
+  assert.doesNotMatch(storedText, /quoted secret value|ghp_abcdefghijklmnopqrstuvwxyz123456|abcdef0123456789|sk-ant-abcdefghijklmnop/);
+  assert.match(storedText, /\[REDACTED\]/);
+  const anchor = createContinuityAnchor(thread, []);
+  assert.doesNotMatch(JSON.stringify(anchor), /quoted secret value|ghp_abcdefghijklmnopqrstuvwxyz123456|abcdef0123456789|sk-ant-abcdefghijklmnop/);
 });

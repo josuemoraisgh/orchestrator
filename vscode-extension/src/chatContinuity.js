@@ -1,5 +1,7 @@
 'use strict';
 
+const { redactSensitiveText } = require('./secretRedaction');
+
 const MAX_OBJECTIVE_CHARS = 6000;
 const MAX_CHECKPOINT_CHARS = 3000;
 const MAX_RECENT_CHARS = 10000;
@@ -7,7 +9,22 @@ const MAX_RECENT_MESSAGES = 24;
 const MAX_TASKS = 24;
 
 function clip(value, limit) {
-  return String(value || '').slice(0, limit);
+  const text = String(value || '');
+  return redactSensitiveText(text, text.length).slice(0, limit);
+}
+
+function sanitizeThreadForStorage(thread) {
+  const previousObjective = thread?.continuity?.version === 1 ? thread.continuity.originalObjective : '';
+  return {
+    id: clip(thread?.id, 100),
+    title: clip(thread?.title, 240),
+    updatedAt: Number(thread?.updatedAt || 0),
+    messages: (Array.isArray(thread?.messages) ? thread.messages : []).map(message => ({
+      role: message?.role === 'assistant' ? 'assistant' : 'user',
+      text: clip(message?.text, String(message?.text || '').length)
+    })),
+    ...(previousObjective ? { continuity: { version: 1, originalObjective: clip(previousObjective, MAX_OBJECTIVE_CHARS) } } : {})
+  };
 }
 
 function summarizeRuns(runs) {
@@ -82,4 +99,4 @@ function buildContinuityContext(thread, runs = {}, options = {}) {
   return { anchor, anchorText, recentMessages: recent };
 }
 
-module.exports = { createContinuityAnchor, buildContinuityContext };
+module.exports = { createContinuityAnchor, buildContinuityContext, sanitizeThreadForStorage };

@@ -9,7 +9,7 @@ const { applyPendingDispatchAbort } = require('./taskPreflight');
 const { buildMemoryQueryInput } = require('./aiMemoryMcp');
 const { requireTaskDispatch } = require('./taskDispatch');
 const { reconcileHandoffRecovery, restoreHandoffSession } = require('./handoffRecovery');
-const { createContinuityAnchor, buildContinuityContext } = require('./chatContinuity');
+const { createContinuityAnchor, buildContinuityContext, sanitizeThreadForStorage } = require('./chatContinuity');
 const { resolveCoordinatorCli } = require('./coordinatorReadiness');
 const { validateAddedDiffLocation } = require('./diffReview');
 const { modelAccessStatus, modelAccessLabel } = require('./modelAccess');
@@ -1809,7 +1809,7 @@ class OrchestratorHomeView {
   }
 
   async persistThreads(threads) {
-    const threadList = threads.slice(0, 40);
+    const threadList = threads.slice(0, 40).map(sanitizeThreadForStorage);
     const activeId = this.context.workspaceState.get(this.activeKey);
     const activeThread = threadList.find(thread => thread.id === activeId);
     if (activeThread) activeThread.continuity = createContinuityAnchor(activeThread, this.context.workspaceState.get(TASK_RUNS_KEY, []));
