@@ -1,8 +1,12 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
 const Module = require('node:module');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
+const { TaskJournal } = require('../src/taskJournal');
 
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
@@ -53,4 +57,35 @@ test('Codex polling fails clearly after the recorded owner exits without a resul
 
   assert.equal(result.status, 'failed');
   assert.match(result.error, /host proprietário.*encerrou/i);
+});
+
+test('separate Codex poller observes running and completed owner updates through the real task journal', async t => {
+  const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'orchestrator-cross-window-codex-'));
+  const project = path.join(storage, 'project');
+  await fs.mkdir(project);
+  t.after(() => fs.rm(storage, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
+  const journal = new TaskJournal(path.join(storage, 'extension-storage'));
+  const run = { id: 'run-1', title: 'Cross-window task', prompt: 'Build the feature' };
+  const task = {
+    runId: run.id, id: 'task-1', title: 'Implement feature', description: 'Bounded task', acceptanceCriteria: ['Works'],
+    status: 'running', provider: 'codex', profileId: 'profile-1', model: 'gpt-test', effort: 'medium',
+    executor: 'codex-app-server', attempts: 1, sessionId: 'session-1', threadId: 'thread-1',
+    projectPath: project, worktreePath: project, history: []
+  };
+  await journal.record(project, run, task, 'session-started');
+  const sessionsInSecondWindow = { poll: () => ({ status: 'unknown', code: 'SESSION_NOT_OWNED' }) };
+
+  const whileOwnerRuns = await pollCodexAppServerTask(sessionsInSecondWindow, journal, task);
+  assert.equal(whileOwnerRuns.status, 'pending', JSON.stringify(whileOwnerRuns));
+  assert.equal(whileOwnerRuns.sessionState, 'busy');
+
+  task.status = 'awaitingReview';
+  task.result = 'Implemented and verified';
+  task.history.push({ at: Date.now(), event: 'result', detail: task.result });
+  await journal.record(project, run, task, 'poll-answered');
+  const afterOwnerCompletes = await pollCodexAppServerTask(sessionsInSecondWindow, journal, task);
+
+  assert.deepEqual(afterOwnerCompletes, {
+    status: 'answered', result: task.result, sessionState: 'done', threadId: task.threadId
+  });
 });
