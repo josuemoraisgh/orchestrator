@@ -19,7 +19,7 @@ Module._load = function(request, parent, isMain) {
   };
   return originalLoad.call(this, request, parent, isMain);
 };
-const { pollCodexAppServerTask } = require('../src/extension');
+const { pollCodexAppServerTask, pollClaudeCodeTask } = require('../src/extension');
 Module._load = originalLoad;
 
 function foreignSessionHarness(latest) {
@@ -80,6 +80,39 @@ test('Codex polling records old owner sessions as uncertain when the worker PID 
   const result = await pollCodexAppServerTask(sessions, journal, task);
   assert.equal(result.sessionState, 'owner-host-ended-unverified');
   assert.ok(result.error.includes('encerrou'));
+});
+
+test('Claude polling in another VS Code window keeps a live owner session pending', async () => {
+  const { sessions, journal, task } = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: process.pid });
+
+  const result = await pollClaudeCodeTask(sessions, journal, task);
+
+  assert.deepEqual(result, {
+    status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.'
+  });
+});
+
+test('Claude polling identifies an orphan worker and allows recovery only after it exits', async () => {
+  const active = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: 2147483647, workerPid: process.pid });
+  const whileWorkerRuns = await pollClaudeCodeTask(active.sessions, active.journal, active.task);
+  assert.equal(whileWorkerRuns.status, 'failed');
+  assert.equal(whileWorkerRuns.sessionState, 'orphaned-process');
+  assert.match(whileWorkerRuns.error, /Claude process .*still active/i);
+
+  const exited = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: 2147483647, workerPid: 2147483646, threadId: 'claude-thread-1' });
+  const afterBothExit = await pollClaudeCodeTask(exited.sessions, exited.journal, exited.task);
+  assert.equal(afterBothExit.status, 'failed');
+  assert.equal(afterBothExit.sessionState, 'owner-host-ended');
+  assert.match(afterBothExit.error, /resume the saved session/i);
+});
+
+test('Claude polling marks legacy owner records without a worker PID as uncertain', async () => {
+  const { sessions, journal, task } = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: 2147483647 });
+
+  const result = await pollClaudeCodeTask(sessions, journal, task);
+
+  assert.equal(result.sessionState, 'owner-host-ended-unverified');
+  assert.match(result.error, /no worker PID/i);
 });
 
 test('separate Codex poller observes running and completed owner updates through the real task journal', async t => {
