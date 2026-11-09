@@ -73,6 +73,13 @@ test('generated settings webview JavaScript parses before it is sent to VS Code'
   assert.doesNotThrow(() => new vm.Script(script, { filename: 'orchestrator-settings-webview.js' }));
 });
 
+test('generated Orchestrator chat JavaScript parses before it is sent to VS Code', () => {
+  const html = OrchestratorHomeView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
+  const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  assert.ok(script, 'Orchestrator chat webview should contain its client script');
+  assert.doesNotThrow(() => new vm.Script(script, { filename: 'orchestrator-home-webview.js' }));
+});
+
 test('all static settings webview element references exist in the generated HTML', () => {
   const html = OrchestratorSettingsView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
   const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
