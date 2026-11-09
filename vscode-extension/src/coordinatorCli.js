@@ -14,12 +14,21 @@ function profileHome(profile, storageRoot) {
 
 function profileEnvironment(profile, storageRoot) {
   const home = profileHome(profile, storageRoot);
-  if (!home) return { ...process.env };
   const env = { ...process.env };
-  for (const key of ['OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_IDENTITY_TOKEN_FILE', 'OPENAI_FEDERATION_RULE_ID', 'OPENAI_WORKLOAD_IDENTITY_CONTEXT', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN']) delete env[key];
-  delete env.CODEX_HOME;
-  delete env.CLAUDE_CONFIG_DIR;
-  env[profile.providerId === 'claude' ? 'CLAUDE_CONFIG_DIR' : 'CODEX_HOME'] = home;
+  const codexCredentials = ['OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_IDENTITY_TOKEN_FILE', 'OPENAI_FEDERATION_RULE_ID', 'OPENAI_WORKLOAD_IDENTITY_CONTEXT'];
+  const claudeCredentials = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN'];
+  if (home) {
+    for (const key of [...codexCredentials, ...claudeCredentials]) delete env[key];
+    delete env.CODEX_HOME;
+    delete env.CLAUDE_CONFIG_DIR;
+    env[profile.providerId === 'claude' ? 'CLAUDE_CONFIG_DIR' : 'CODEX_HOME'] = home;
+  } else if (profile?.providerId === 'claude') {
+    for (const key of codexCredentials) delete env[key];
+    delete env.CODEX_HOME;
+  } else if (profile?.providerId === 'codex') {
+    for (const key of claudeCredentials) delete env[key];
+    delete env.CLAUDE_CONFIG_DIR;
+  }
   return env;
 }
 

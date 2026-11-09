@@ -37,6 +37,8 @@ test('isolated provider profiles receive separate homes and no inherited provide
   const firstCodex = { id: '11111111-1111-4111-8111-111111111111', providerId: 'codex', isolated: true };
   const secondCodex = { id: '22222222-2222-4222-8222-222222222222', providerId: 'codex', isolated: true };
   const claude = { id: '33333333-3333-4333-8333-333333333333', providerId: 'claude', isolated: true };
+  const defaultCodex = { id: 'default-codex-cli-profile', providerId: 'codex', isolated: false };
+  const defaultClaude = { id: 'default-claude-cli-profile', providerId: 'claude', isolated: false };
   const codexHomeA = profileHome(firstCodex, storage);
   const codexHomeB = profileHome(secondCodex, storage);
   const claudeHome = profileHome(claude, storage);
@@ -53,6 +55,20 @@ test('isolated provider profiles receive separate homes and no inherited provide
     assert.equal(profileEnvironment(firstCodex, storage)[name], undefined, `${name} leaked into Codex profile`);
     assert.equal(profileEnvironment(claude, storage)[name], undefined, `${name} leaked into Claude profile`);
   }
+  const codexEnv = profileEnvironment(defaultCodex, storage);
+  for (const name of credentials.filter(name => name.startsWith('ANTHROPIC_') || name.startsWith('CLAUDE_'))) {
+    assert.equal(codexEnv[name], undefined, `${name} leaked into the default Codex profile`);
+  }
+  assert.equal(codexEnv.OPENAI_API_KEY, process.env.OPENAI_API_KEY, 'the default Codex profile retains its own environment authentication');
+  assert.equal(codexEnv.CODEX_HOME, 'inherited-codex-home', 'the default Codex profile retains its configured CLI home');
+  assert.equal(codexEnv.CLAUDE_CONFIG_DIR, undefined);
+  const claudeEnv = profileEnvironment(defaultClaude, storage);
+  for (const name of credentials.filter(name => name.startsWith('OPENAI_') || name.startsWith('CODEX_'))) {
+    assert.equal(claudeEnv[name], undefined, `${name} leaked into the default Claude profile`);
+  }
+  assert.equal(claudeEnv.ANTHROPIC_API_KEY, process.env.ANTHROPIC_API_KEY, 'the default Claude profile retains its own environment authentication');
+  assert.equal(claudeEnv.CLAUDE_CONFIG_DIR, 'inherited-claude-home', 'the default Claude profile retains its configured CLI home');
+  assert.equal(claudeEnv.CODEX_HOME, undefined);
   assert.equal(process.env.CODEX_HOME, 'inherited-codex-home');
   assert.equal(process.env.CLAUDE_CONFIG_DIR, 'inherited-claude-home');
 
