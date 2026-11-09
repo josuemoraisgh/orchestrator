@@ -2,8 +2,8 @@
 
 // Opt-in provider integration. A real Claude coordinator creates a plan via
 // the production chat handler; approval and scheduler then dispatch a real,
-// tightly constrained Claude worker in a temporary project. No VS Code window
-// is launched, and permission requests for filesystem or shell tools are denied.
+// tightly constrained Claude worker in a temporary project. Only one exact
+// file write is approved. No VS Code window is launched.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
@@ -69,6 +69,8 @@ test('live coordinator plan stays pending until approval, then reaches the sched
   const journalEvents = [];
   const messages = [];
   const workerSessions = new ClaudeCodeSessions();
+  const expectedFile = path.join(project, 'workflow-result.txt');
+  const approvedWrites = [];
   const context = { workspaceState };
   const view = Object.create(OrchestratorHomeView.prototype);
   Object.assign(view, {
@@ -113,12 +115,24 @@ test('live coordinator plan stays pending until approval, then reaches the sched
           title: input.task.title,
           prefixArgs: ['--max-turns', '2'],
           nodeExecutable: process.execPath,
-          requestApproval: async () => false,
+          requestApproval: async action => {
+            if (!String(action).includes('usar Write')) return false;
+            const separator = String(action).indexOf('\n\n');
+            if (separator < 0) return false;
+            let args;
+            try { args = JSON.parse(String(action).slice(separator + 2)); }
+            catch { return false; }
+            const allowed = path.resolve(String(args.file_path || '')) === expectedFile
+              && String(args.content || '').trim() === 'LIVE_WORKFLOW_ACCEPTED'
+              && approvedWrites.length === 0;
+            if (allowed) approvedWrites.push({ filePath: expectedFile, content: String(args.content).trim() });
+            return allowed;
+          },
           prompt: [
             `Task: ${input.task.title}`,
             input.task.description,
             `Acceptance criteria: ${(input.task.acceptanceCriteria || []).join('; ')}`,
-            'Reply exactly with LIVE_WORKFLOW_ACCEPTED. Do not use tools and do not change files.'
+            `Create exactly one file at ${expectedFile} with the exact content LIVE_WORKFLOW_ACCEPTED using the Write tool. Do not use other tools or change any other file. After writing, reply with LIVE_WORKFLOW_ACCEPTED.`
           ].join('\n')
         });
         return {
@@ -169,6 +183,8 @@ test('live coordinator plan stays pending until approval, then reaches the sched
   }
   assert.ok(workerResult, 'real Claude worker must finish within the bounded test window');
   assert.match(workerResult.result, /LIVE_WORKFLOW_ACCEPTED/);
+  assert.deepEqual(approvedWrites, [{ filePath: expectedFile, content: 'LIVE_WORKFLOW_ACCEPTED' }]);
+  assert.equal(await fs.readFile(expectedFile, 'utf8'), 'LIVE_WORKFLOW_ACCEPTED');
 
   await view.pollTasks(true);
   runs = workspaceState.get(taskRunsKey, []);
