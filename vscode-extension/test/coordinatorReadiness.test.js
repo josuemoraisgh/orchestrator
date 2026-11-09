@@ -21,6 +21,22 @@ test('CLI coordinator is ready only when the matching provider and authorized pr
   assert.equal(result.profile.name, 'Claude principal');
   assert.equal(result.provider.name, 'Claude');
   assert.equal(result.message, '');
+  assert.equal(result.recoverable, false);
+});
+
+test('CLI coordinator exposes recovery only when the missing ID can safely bind the current provider login', () => {
+  const recoverable = resolveCoordinatorCli({ mode: 'cli', providerId: 'claude', profileId: 'old-claude-id' }, [], providers);
+  assert.equal(recoverable.ready, false);
+  assert.equal(recoverable.recoverable, true);
+
+  const anotherProviderProfile = resolveCoordinatorCli({ mode: 'cli', providerId: 'claude', profileId: 'old-claude-id' }, [profiles[2]], providers);
+  assert.equal(anotherProviderProfile.recoverable, true);
+
+  const existingProviderProfile = resolveCoordinatorCli({ mode: 'cli', providerId: 'claude', profileId: 'old-claude-id' }, [profiles[0]], providers);
+  assert.equal(existingProviderProfile.recoverable, false);
+
+  const occupiedId = resolveCoordinatorCli({ mode: 'cli', providerId: 'claude', profileId: 'codex-main' }, profiles, providers);
+  assert.equal(occupiedId.recoverable, false);
 });
 
 test('CLI coordinator status reports a profile missing from the current VS Code profile', () => {
@@ -52,6 +68,6 @@ test('CLI coordinator status distinguishes no selected profile and unavailable C
 
 test('VS Code model coordinators are outside CLI readiness checks', () => {
   assert.deepEqual(resolveCoordinatorCli({ mode: 'vscode', providerId: 'claude' }, profiles, providers), {
-    ready: false, profile: undefined, provider: undefined, message: ''
+    ready: false, recoverable: false, profile: undefined, provider: undefined, message: ''
   });
 });
