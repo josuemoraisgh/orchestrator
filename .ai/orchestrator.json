@@ -1,0 +1,44 @@
+{
+  "build": null,
+  "upstreams": [],
+  "tools": {
+    "lichCommand": "lich",
+    "aiMemoryCommand": "ai-memory"
+  },
+  "orchestration": {
+    "mode": "cli",
+    "providerId": "claude",
+    "profileId": "f5100f5f-dba3-4b63-a910-758b8d6c20bf",
+    "modelId": "",
+    "model": null,
+    "effort": "",
+    "allowedProviders": [
+      "claude",
+      "codex"
+    ],
+    "maxParallel": 2,
+    "maxAttempts": 3,
+    "budgetLimitUsd": 0,
+    "availableProviders": [
+      {
+        "id": "claude",
+        "name": "Claude",
+        "source": "Claude Code CLI detectada; sessão nativa do Orchestrator com streaming, retomada, modelo/esforço e aprovações"
+      },
+      {
+        "id": "codex",
+        "name": "Codex",
+        "source": "CLI oficial detectada; app-server local documentado disponível; autenticação e modelo serão verificados antes da tarefa"
+      }
+    ]
+  },
+  "workerDefaults": {
+    "provider": "claude",
+    "model": "",
+    "effort": ""
+  },
+  "aiMemory": {
+    "workspace": "",
+    "project": ""
+  }
+}
