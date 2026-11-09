@@ -2,7 +2,7 @@
   "name": "orchestrator-ai",
   "displayName": "Orchestrator-AI",
   "description": "A project-neutral VS Code coordinator with managed AI Memory continuity and native agent orchestration.",
-  "version": "0.1.83",
+  "version": "0.1.84",
   "publisher": "local",
   "license": "MIT",
   "engines": {
@@ -266,8 +266,9 @@
   },
   "scripts": {
     "test": "node --test",
-    "package": "node scripts/refresh-upstream-releases.js && npx @vscode/vsce package --allow-missing-repository",
-    "package:offline": "npx @vscode/vsce package --allow-missing-repository"
+    "sbom": "node scripts/create-sbom.js",
+    "package": "node scripts/refresh-upstream-releases.js && npm run sbom && npx @vscode/vsce package --allow-missing-repository",
+    "package:offline": "npm run sbom && npx @vscode/vsce package --allow-missing-repository"
   },
   "dependencies": {
     "ignore": "7.0.14",

@@ -64,10 +64,31 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Runtime dependencies
+## Runtime dependencies and artifact inventory
 
-The extension also bundles `proper-lockfile` 4.1.2 (MIT, copyright 2018 Made
-With MOXY Lda), `retry` 0.12.0 (MIT, copyright 2011 Tim KoschÃ¼tzki and Felix
-GeisendÃ¶rfer), and `signal-exit` 3.0.7 (ISC, copyright 2015 Contributors).
-Their complete license texts are included with the corresponding dependency
-files under `node_modules/` in the packaged extension.
+The production dependency closure in the VSIX is generated from the locked
+root dependencies and is recorded in `sbom.cdx.json` (CycloneDX 1.5). It
+contains these npm packages:
+
+| Package | Version | License | License file included in the VSIX |
+| --- | --- | --- | --- |
+| `ignore` | 7.0.14 | MIT | `extension/node_modules/ignore/LICENSE-MIT` |
+| `proper-lockfile` | 4.1.2 | MIT | `extension/node_modules/proper-lockfile/LICENSE` |
+| `graceful-fs` | 4.2.11 | ISC | `extension/node_modules/graceful-fs/LICENSE` |
+| `retry` | 0.12.0 | MIT | `extension/node_modules/retry/License` |
+| `signal-exit` | 3.0.7 | ISC | `extension/node_modules/signal-exit/LICENSE.txt` |
+| `yauzl` | 3.4.0 | MIT | `extension/node_modules/yauzl/LICENSE` |
+| `pend` | 1.2.0 | MIT | `extension/node_modules/pend/LICENSE` |
+
+The complete license texts and attribution notices are shipped at those paths.
+The VSIX archive inventory was checked against the SBOM; each of the seven
+bundled production packages has its declared license and corresponding license
+file in the artifact. Development-only packaging dependencies are excluded
+from the runtime SBOM and VSIX.
+
+The pinned Windows x64 AI Memory runtime is downloaded at installation time,
+verified against the SHA-256 digest in `upstream-releases.json`, and listed as
+an external runtime component in the SBOM. Its MIT license appears above. The
+VSIX does not contain Lich source code, assets, or binaries; Lich is recorded
+only in release metadata as a behavioral-reference/legacy-compatibility
+project and is not installed by the default runtime.

@@ -1,0 +1,371 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-09T16:15:34.412Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "tools": [
+      {
+        "vendor": "npm",
+        "name": "orchestrator-ai-sbom-generator",
+        "version": "1.0.0"
+      }
+    ],
+    "component": {
+      "bom-ref": "orchestrator-ai@0.1.84",
+      "type": "application",
+      "name": "Orchestrator-AI",
+      "version": "0.1.84",
+      "scope": "required",
+      "description": "A project-neutral VS Code coordinator with managed AI Memory continuity and native agent orchestration.",
+      "purl": "pkg:npm/orchestrator-ai@0.1.84",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:github/akitaonrails/ai-memory@3.4.4",
+      "type": "application",
+      "name": "AI Memory",
+      "version": "3.4.4",
+      "scope": "required",
+      "purl": "pkg:github/akitaonrails/ai-memory@3.4.4",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://github.com/akitaonrails/ai-memory/releases/download/v3.4.4/ai-memory-windows-x86_64.zip"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/akitaonrails/ai-memory"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "75844776d9250fd00daa6dd8d5852868163569d3e767daa991bc6e36b2706cce"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "orchestrator:delivery",
+          "value": "downloaded-at-runtime-and-digest-verified"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/graceful-fs@4.2.11",
+      "type": "library",
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "scope": "required",
+      "description": "A drop-in replacement for fs, making various improvements.",
+      "purl": "pkg:npm/graceful-fs@4.2.11",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/isaacs/node-graceful-fs"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "45b279fe398570d342703579a3d7939c12c9fc7b33595d0fef76dcf857f89d2feb263f98692e881b288e2f45680585fe9755ab97793ade1fcaac7fa7849d17bd"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/ignore@7.0.14",
+      "type": "library",
+      "name": "ignore",
+      "version": "7.0.14",
+      "scope": "required",
+      "author": "kael",
+      "description": "Ignore is a manager and filter for .gitignore rules, the one used by eslint, gitbook and many others.",
+      "purl": "pkg:npm/ignore@7.0.14",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/ignore/-/ignore-7.0.14.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/kaelzhang/node-ignore.git"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c0206267beeed6db9675ee86fe77ceb4b6824d87050d4e720b3011ccad74cbeacb8736282fb6bbc847a6728a5c736333a30ee064e2239d5db29b535899d88939"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/pend@1.2.0",
+      "type": "library",
+      "name": "pend",
+      "version": "1.2.0",
+      "scope": "required",
+      "author": "Andrew Kelley <superjoe30@gmail.com>",
+      "description": "dead-simple optimistic async helper",
+      "purl": "pkg:npm/pend@1.2.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/pend/-/pend-1.2.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git://github.com/andrewrk/node-pend.git"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1776acbf8d94b97721773b7ec57a9f5b538695505efa6c5ada6a88d29839c801d93ef16663763a76b49ffc643503ce9681610df4ace1fd6ae029aea219c1d72e"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/proper-lockfile@4.1.2",
+      "type": "library",
+      "name": "proper-lockfile",
+      "version": "4.1.2",
+      "scope": "required",
+      "author": "André Cruz <andre@moxy.studio>",
+      "description": "A inter-process and inter-machine lockfile utility that works on a local or network file system",
+      "purl": "pkg:npm/proper-lockfile@4.1.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/proper-lockfile/-/proper-lockfile-4.1.2.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git@github.com:moxystudio/node-proper-lockfile.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/moxystudio/node-proper-lockfile"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4e334f6e537807001631753cb3d004cf82664319c3d4d34bedb34e63f00a533c9a99cdfbf4558049485cfcad692f69e855bf9799928b2faf1c8f32ec88e00c68"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/retry@0.12.0",
+      "type": "library",
+      "name": "retry",
+      "version": "0.12.0",
+      "scope": "required",
+      "author": "Tim Koschützki <tim@debuggable.com> (http://debuggable.com/)",
+      "description": "Abstraction for exponential and custom retry strategies for failed operations.",
+      "purl": "pkg:npm/retry@0.12.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/retry/-/retry-0.12.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git://github.com/tim-kos/node-retry.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/tim-kos/node-retry"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f4b9224f08d487aad3e79e43b44f6b4d7f81281c8f7eb333100b67944b5d130af73647dfc228a1a9ed9b5800e0f8e4118edf6097a20276607f6450c2180b52a3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/signal-exit@3.0.7",
+      "type": "library",
+      "name": "signal-exit",
+      "version": "3.0.7",
+      "scope": "required",
+      "author": "Ben Coe <ben@npmjs.com>",
+      "description": "when you want to fire an event no matter how a process exits.",
+      "purl": "pkg:npm/signal-exit@3.0.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/signal-exit/-/signal-exit-3.0.7.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/tapjs/signal-exit.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/tapjs/signal-exit"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c270f6644fa5f923c2feea12d2f5de13d2f5fb4c2e68ca8a95fcfd00c528dfc26cc8b48159215c1d1d51ae2eb62d9735daf2ebd606f78e5ee2c10860c2901b19"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/yauzl@3.4.0",
+      "type": "library",
+      "name": "yauzl",
+      "version": "3.4.0",
+      "scope": "required",
+      "author": "Josh Wolfe <thejoshwolfe@gmail.com>",
+      "description": "yet another unzip library for node",
+      "purl": "pkg:npm/yauzl@3.4.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/yauzl/-/yauzl-3.4.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/thejoshwolfe/yauzl.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/thejoshwolfe/yauzl"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8c81fdc8b47dc2aaf4c0e4b44e906fa3f83fd948191f9a9e3d56e3811962885d0162f399c9a0649cab05fb1f4886dd0eeacaa09c1f77ac220274e64579c26e0f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "orchestrator-ai@0.1.84",
+      "dependsOn": [
+        "pkg:github/akitaonrails/ai-memory@3.4.4",
+        "pkg:npm/ignore@7.0.14",
+        "pkg:npm/proper-lockfile@4.1.2",
+        "pkg:npm/yauzl@3.4.0"
+      ]
+    },
+    {
+      "ref": "pkg:github/akitaonrails/ai-memory@3.4.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/graceful-fs@4.2.11",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/ignore@7.0.14",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/pend@1.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/proper-lockfile@4.1.2",
+      "dependsOn": [
+        "pkg:npm/graceful-fs@4.2.11",
+        "pkg:npm/retry@0.12.0",
+        "pkg:npm/signal-exit@3.0.7"
+      ]
+    },
+    {
+      "ref": "pkg:npm/retry@0.12.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/signal-exit@3.0.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/yauzl@3.4.0",
+      "dependsOn": [
+        "pkg:npm/pend@1.2.0"
+      ]
+    }
+  ]
+}
