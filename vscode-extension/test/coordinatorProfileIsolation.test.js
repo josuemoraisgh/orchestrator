@@ -45,6 +45,10 @@ test('isolated provider profiles receive separate homes and no inherited provide
   assert.equal(profileEnvironment(firstCodex, storage).CODEX_HOME, codexHomeA);
   assert.equal(profileEnvironment(secondCodex, storage).CODEX_HOME, codexHomeB);
   assert.equal(profileEnvironment(claude, storage).CLAUDE_CONFIG_DIR, claudeHome);
+  for (const profile of [firstCodex, secondCodex]) {
+    assert.equal(profileEnvironment(profile, storage).CLAUDE_CONFIG_DIR, undefined, 'the isolated Codex profile must not inherit a Claude account directory');
+  }
+  assert.equal(profileEnvironment(claude, storage).CODEX_HOME, undefined, 'the isolated Claude profile must not inherit a Codex account directory');
   for (const name of credentials) {
     assert.equal(profileEnvironment(firstCodex, storage)[name], undefined, `${name} leaked into Codex profile`);
     assert.equal(profileEnvironment(claude, storage)[name], undefined, `${name} leaked into Claude profile`);

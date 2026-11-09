@@ -17,6 +17,8 @@ function profileEnvironment(profile, storageRoot) {
   if (!home) return { ...process.env };
   const env = { ...process.env };
   for (const key of ['OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_IDENTITY_TOKEN_FILE', 'OPENAI_FEDERATION_RULE_ID', 'OPENAI_WORKLOAD_IDENTITY_CONTEXT', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN']) delete env[key];
+  delete env.CODEX_HOME;
+  delete env.CLAUDE_CONFIG_DIR;
   env[profile.providerId === 'claude' ? 'CLAUDE_CONFIG_DIR' : 'CODEX_HOME'] = home;
   return env;
 }
