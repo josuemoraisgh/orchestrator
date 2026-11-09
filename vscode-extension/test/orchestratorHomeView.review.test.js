@@ -217,18 +217,23 @@ test('recovery keeps a cancelling session reserved until stop is confirmed', asy
   assert.equal(view.polling, false);
 });
 
-test('retry keeps the old session and its slot when stop is not confirmed', async () => {
+test('retry preserves the old session and restores a missing slot when stop is not confirmed', async () => {
   const task = { id: 'task-a', title: 'Work', status: 'failed', attempts: 1, sessionId: 'session-a', sessionState: 'busy', provider: 'codex', executor: 'codex-app-server', history: [] };
   const run = { id: 'run-1', status: 'blocked', tasks: [task] };
   let runs = [run];
   let released = false;
   let scheduled = false;
   const updates = [];
+  const registrations = [];
   const view = Object.create(OrchestratorHomeView.prototype);
   view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
   view.getState = async () => ({ workspace: 'C:/project', config: { orchestration: { maxAttempts: 3 } } });
   view.taskActions = { stop: async () => ({ stopped: false, sessionState: 'busy' }) };
-  view.sharedTaskSlots = { update: async (...args) => updates.push(args), release: async () => { released = true; } };
+  view.sharedTaskSlots = {
+    update: async (...args) => { updates.push(args); return false; },
+    register: async (...args) => { registrations.push(args); return true; },
+    release: async () => { released = true; }
+  };
   view.recordTaskJournal = async () => true;
   view.refreshState = async () => {};
   view.scheduleRun = async () => { scheduled = true; };
@@ -243,6 +248,7 @@ test('retry keeps the old session and its slot when stop is not confirmed', asyn
   assert.equal(scheduled, false);
   assert.equal(updates[0][3].status, 'running');
   assert.equal(updates[0][3].sessionId, 'session-a');
+  assert.deepEqual(registrations, [['C:/project', 'run-1', 'task-a', updates[0][3]]]);
 });
 
 test('retry skips stop for a terminal session and schedules a fresh attempt', async () => {

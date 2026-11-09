@@ -1124,7 +1124,13 @@ class OrchestratorHomeView {
         task.history = Array.isArray(task.history) ? task.history : [];
         task.history.push({ at: Date.now(), event: 'retry-stop-unconfirmed', detail: task.error });
         run.status = 'running'; run.updatedAt = Date.now();
-        await this.sharedTaskSlots.update(workspace, run.id, task.id, { status: 'running', sessionId: task.sessionId, provider: task.provider || '', profileId: task.profileId || '' });
+        const activeLease = {
+          status: 'running', sessionId: task.sessionId, provider: task.provider || '', profileId: task.profileId || '',
+          workerPid: task.workerPid || 0, title: task.title || '',
+          projectPath: task.projectPath || workspace, worktreePath: task.worktreePath || ''
+        };
+        const leaseUpdated = await this.sharedTaskSlots.update(workspace, run.id, task.id, activeLease);
+        if (!leaseUpdated) await this.sharedTaskSlots.register(workspace, run.id, task.id, activeLease);
         await this.recordTaskJournal(workspace, run, task, 'retry-stop-unconfirmed');
         await this.context.workspaceState.update(TASK_RUNS_KEY, runs);
         await this.refreshState();
