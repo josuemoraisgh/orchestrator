@@ -24,6 +24,7 @@ class OrchestratorSettingsView {
   async openPanel() {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.Beside);
+      await this.refresh();
       return;
     }
     const panel = vscode.window.createWebviewPanel(
@@ -88,7 +89,26 @@ class OrchestratorSettingsView {
   }
 
   async refresh() {
-    if (this.panel) await this.panel.webview.postMessage({ type: 'state', state: await this.getState() });
+    const panel = this.panel;
+    if (!panel) return;
+    let timer;
+    try {
+      const state = await Promise.race([
+        this.getState(),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('A leitura das configurações excedeu 15 segundos. Reabra Configurações para tentar novamente.')), 15000);
+        })
+      ]);
+      if (this.panel === panel) await panel.webview.postMessage({ type: 'state', state });
+    } catch (error) {
+      if (this.panel === panel) await panel.webview.postMessage({
+        type: 'stateError',
+        workspace: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
+        text: error.message || String(error)
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async refreshProviders() {
@@ -854,7 +874,23 @@ class OrchestratorSettingsView {
       }});
     });
     window.addEventListener('message', event => {
-      if (event.data.type === 'state') load(event.data.state);
+      if (event.data.type === 'state') {
+        try { load(event.data.state); }
+        catch (error) {
+          byId('workspace').textContent = 'NÃ£o foi possÃ­vel exibir o estado do projeto.';
+          byId('aiStatus').textContent = error.message || String(error);
+          byId('initialize').disabled = true;
+          byId('save').disabled = true;
+          showNotice({ level: 'error', text: 'Erro ao exibir as configuraÃ§Ãµes: ' + (error.message || String(error)) });
+        }
+      }
+      if (event.data.type === 'stateError') {
+        byId('workspace').textContent = event.data.workspace || 'Nenhuma pasta de projeto aberta.';
+        byId('aiStatus').textContent = 'NÃ£o foi possÃ­vel carregar o estado da pasta .ai.';
+        byId('initialize').disabled = true;
+        byId('save').disabled = true;
+        showNotice({ level: 'error', text: 'Falha ao carregar as configuraÃ§Ãµes: ' + event.data.text });
+      }
       if (event.data.type === 'providers') {
         const providerId = byId('orchestratorProvider').value;
         const modelId = byId('orchestratorModel').value;

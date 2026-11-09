@@ -137,6 +137,31 @@ test('webviews receive CSP HTML before scripts are enabled', async () => {
   }
 });
 
+test('reopening the settings panel refreshes its project state', async () => {
+  const events = [];
+  const settings = Object.create(OrchestratorSettingsView.prototype);
+  settings.panel = { reveal: column => events.push(['reveal', column]) };
+  settings.refresh = async () => events.push(['refresh']);
+
+  await settings.openPanel();
+
+  assert.deepEqual(events, [['reveal', mockVscode.ViewColumn.Beside], ['refresh']]);
+});
+
+test('settings state read failures are sent to the webview instead of remaining silent', async () => {
+  const messages = [];
+  const panel = { webview: { postMessage: async message => { messages.push(message); return true; } } };
+  const settings = Object.create(OrchestratorSettingsView.prototype);
+  settings.panel = panel;
+  settings.getState = async () => { throw new Error('state unavailable'); };
+
+  await settings.refresh();
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].type, 'stateError');
+  assert.equal(messages[0].text, 'state unavailable');
+});
+
 test('settings view routes project knowledge operations and blocks them in Restricted Mode', async () => {
   const originalTrusted = mockVscode.workspace.isTrusted;
   const sent = [];
