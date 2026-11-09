@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const test = require('node:test');
+const vm = require('node:vm');
 const { createWebviewSecurity } = require('../src/webviewSecurity');
 
 const originalLoad = Module._load;
@@ -63,6 +64,60 @@ test('both Orchestrator webview documents actually emit a CSP and nonce-bound sc
       assert.match(html, /aguardando consentimento/);
     }
   }
+});
+
+test('generated settings webview JavaScript parses before it is sent to VS Code', () => {
+  const html = OrchestratorSettingsView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
+  const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  assert.ok(script, 'settings webview should contain its client script');
+  assert.doesNotThrow(() => new vm.Script(script, { filename: 'orchestrator-settings-webview.js' }));
+});
+
+test('all static settings webview element references exist in the generated HTML', () => {
+  const html = OrchestratorSettingsView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
+  const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+  const declared = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+  const referenced = new Set([...script.matchAll(/byId\('([^']+)'\)/g)].map(match => match[1]));
+  const missing = [...referenced].filter(id => !declared.has(id));
+  assert.deepEqual(missing, []);
+});
+
+test('settings webview script handles the host state message and renders the project', () => {
+  const html = OrchestratorSettingsView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
+  const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  const elements = new Map();
+  class Element {
+    constructor(tagName = 'div') { this.tagName = tagName; this.children = []; this.options = []; this.dataset = {}; this.value = ''; this.textContent = ''; this.hidden = false; this.disabled = false; this.checked = false; }
+    addEventListener() {}
+    append(...items) { this.children.push(...items); if (this.tagName === 'select') this.options = this.children; }
+    replaceChildren(...items) { this.children = items; if (this.tagName === 'select') this.options = items; }
+    querySelector() { return new Element(); }
+    querySelectorAll() { return []; }
+    setAttribute() {}
+  }
+  const document = {
+    getElementById(id) { if (!elements.has(id)) elements.set(id, new Element(id === 'orchestratorProvider' || id === 'coordinatorProfile' || id === 'workerProvider' || id.endsWith('Effort') || id === 'memoryKnowledgeTier' ? 'select' : 'div')); return elements.get(id); },
+    createElement(tagName) { return new Element(tagName); }
+  };
+  const messages = [];
+  let messageHandler;
+  const window = { addEventListener(type, handler) { if (type === 'message') messageHandler = handler; } };
+  function Option(label, value) { this.textContent = label; this.value = value; }
+
+  new vm.Script(script).runInNewContext({ document, window, Option, acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) }) });
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].type, 'load');
+  messageHandler({ data: { type: 'state', state: {
+    workspace: 'C:/test/project', hasWorkspace: true, workspaceTrusted: true,
+    aiExists: true, aiIsDirectory: true,
+    config: { build: null, upstreams: [], orchestration: {}, workerDefaults: {}, aiMemory: {} },
+    tools: {}, options: { providers: [], models: [], modelDiscoveryTimedOut: false },
+    coordinatorProfiles: [], authStatuses: {},
+    memoryScope: { workspace: 'default', project: 'project', source: 'test' }
+  } } });
+
+  assert.equal(elements.get('workspace').textContent, 'C:/test/project');
+  assert.match(elements.get('aiStatus').textContent, /\.ai j/);
 });
 
 test('Orchestrator home does not pollute its chat with Lich-only cost reporting', () => {

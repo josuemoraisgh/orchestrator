@@ -522,7 +522,7 @@ class OrchestratorSettingsView {
       loadedKnowledgePage = { pageToken, page, workspace: state?.workspace || '' };
       byId('memoryKnowledgeEditPath').value = page.path;
       byId('memoryKnowledgeEditor').hidden = false;
-      byId('memoryKnowledgeCurrent').textContent = (page.title || page.path) + '\nVersão ' + page.pageId + '\n\n' + page.body;
+      byId('memoryKnowledgeCurrent').textContent = (page.title || page.path) + '\\nVersão ' + page.pageId + '\\n\\n' + page.body;
       const metadata = page.frontmatter || {};
       byId('memoryKnowledgeEditTier').value = metadata.tier || '';
       byId('memoryKnowledgeEditKind').value = metadata.kind || '';
@@ -912,7 +912,7 @@ class OrchestratorSettingsView {
       if (event.data.type === 'knowledgeSearchResult' && event.data.requestId === String(knowledgeRequest)) {
         const visibleFilters = (event.data.filters || []).filter(name => byId('memoryKnowledgeFilterRows').querySelector('[data-filter="' + name + '"]')?.hidden === false);
         const applied = (event.data.filters || []).filter(name => visibleFilters.includes(name));
-        byId('memoryKnowledgeResults').textContent = 'Escopo ' + event.data.scope.workspace + '/' + event.data.scope.project + ' · limite: ' + (event.data.limit ?? 'padrão do AI Memory') + ' · filtros aplicados: ' + (applied.join(', ') || 'nenhum') + '\n\n' + (event.data.text || '(nenhum resultado retornado pelo AI Memory)');
+        byId('memoryKnowledgeResults').textContent = 'Escopo ' + event.data.scope.workspace + '/' + event.data.scope.project + ' · limite: ' + (event.data.limit ?? 'padrão do AI Memory') + ' · filtros aplicados: ' + (applied.join(', ') || 'nenhum') + '\\n\\n' + (event.data.text || '(nenhum resultado retornado pelo AI Memory)');
       }
       if (event.data.type === 'knowledgeSearchFilters') {
         knowledgeSearchFilters = Array.isArray(event.data.filters) ? event.data.filters : [];

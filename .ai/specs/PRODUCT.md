@@ -1335,3 +1335,5 @@ refresh after either contributed model-list changes or model-access changes.
 Focused model-access, readiness, and webview tests pass. Manual allow/deny
 consent, quota failure, and live provider add/remove behavior remain to be
 verified in VS Code.
+
+Settings webview loading fix (2026-11-09): isolated VS Code 1.145.2 runtime validation of Orchestrator-AI 0.1.77 confirms the Settings panel renders live state for `C:\SourceCode\orchestrator`, including `.ai` status, provider controls, memory scope, build/upstream controls, and save action. The root cause was literal newlines emitted inside quoted strings by the generated inline webview JavaScript, preventing the client script from parsing and leaving the static loading screen indefinitely. Escaping these newlines fixes script parsing. Regression tests compile the generated script, verify all referenced static element IDs exist, and execute the state-message path against a fake DOM to confirm project state rendering. The candidate ran in a dedicated profile and extension directory; its window was closed gracefully and its process tree exited. No provider login or model request was performed.
