@@ -209,6 +209,13 @@ test('Orchestrator home does not pollute its chat with Lich-only cost reporting'
   assert.equal(typeof OrchestratorHomeView.prototype.refreshUsage, 'undefined');
 });
 
+test('Restricted Mode notice describes the first-party coordinator without implying a Lich dependency', () => {
+  const html = OrchestratorHomeView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
+  const notice = /<div id="trustNotice"[^>]*>([\s\S]*?)<\/div>/.exec(html)?.[1] || '';
+  assert.match(notice, /habilitar o coordenador e os recursos de execução do Orchestrator/);
+  assert.doesNotMatch(notice, /Lich/i);
+});
+
 test('webviews receive CSP HTML before scripts are enabled', async () => {
   const homeEvents = [];
   const homeWebview = {
