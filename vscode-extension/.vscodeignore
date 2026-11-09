@@ -6,6 +6,7 @@
 **/*.ts
 scripts/**
 test/**
+test-fixtures/**
 node_modules/**
 !node_modules/yauzl/**
 !node_modules/ignore/**
