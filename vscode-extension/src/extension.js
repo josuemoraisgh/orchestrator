@@ -569,7 +569,6 @@ async function startVscodeModelTask(context, modelSessions, input, taskJournal, 
   requireTrustedWorkspace('Iniciar um agente pelo modelo do VS Code');
   const root = path.resolve(String(input.root || workspaceRoot()));
   const task = input.task;
-  const projectGuidance = await loadProjectGuidance(root);
   const config = await readProjectConfigOptional();
   const options = await listOrchestrationOptions();
   const allowed = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(item => item.canRunInLich && item.cliKind || item.canRunInVscodeModel || item.canRunCodexAppServer).map(item => item.id);
@@ -580,6 +579,7 @@ async function startVscodeModelTask(context, modelSessions, input, taskJournal, 
   const checkout = task.worktree === 'current'
     ? { path: root, branch: 'current', reused: true, projectRoot: root }
     : await worktrees.open(root, { runId: input.runId, taskId: task.id, attempt: task.attempts, branch: task.worktree || undefined, baseBranch: task.base || undefined, seedIncludedFiles: task.worktreeNeedsSeed === true, existingPath: task.worktreePath || undefined });
+  const projectGuidance = await loadProjectGuidance(checkout.path);
   const continuity = await taskJournal.readContext(root, input.runId, task.id).catch(error => ({ verified: false, error: error.message || String(error), text: '' }));
   if (!continuity.verified) throw new Error(`O contexto da tarefa não pôde ser lido do diário local: ${continuity.error || 'registro não confirmado'}`);
   let opened;
@@ -644,7 +644,6 @@ async function startCodexAppServerTask(context, sessions, input, taskJournal, wo
   requireTrustedWorkspace('Iniciar uma tarefa pelo Codex app-server');
   const root = path.resolve(String(input.root || workspaceRoot()));
   const task = input.task;
-  const projectGuidance = await loadProjectGuidance(root);
   if (task.provider !== 'codex') throw new Error('O executor Codex app-server só pode executar tarefas do provedor Codex.');
   const config = await readProjectConfigOptional();
   const options = await listOrchestrationOptions();
@@ -668,6 +667,7 @@ async function startCodexAppServerTask(context, sessions, input, taskJournal, wo
   const checkout = task.worktree === 'current'
     ? { path: root, branch: 'current' }
     : await worktrees.open(root, { runId: input.runId, taskId: task.id, attempt: task.attempts, branch: task.worktree || undefined, baseBranch: task.base || undefined, seedIncludedFiles: task.worktreeNeedsSeed === true, existingPath: task.worktreePath || undefined });
+  const projectGuidance = await loadProjectGuidance(checkout.path);
   const continuity = await taskJournal.readContext(root, input.runId, task.id).catch(error => ({ verified: false, error: error.message || String(error), text: '' }));
   if (!continuity.verified) throw new Error(`O contexto da tarefa não pôde ser lido do diário local: ${continuity.error || 'registro não confirmado'}`);
   const detectedMemoryScope = await projectAiMemoryScope(root, config);
@@ -811,7 +811,6 @@ async function startClaudeCodeTask(context, sessions, input, taskJournal, worktr
   requireTrustedWorkspace('Iniciar uma tarefa com Claude Code');
   const root = path.resolve(String(input.root || workspaceRoot()));
   const task = input.task;
-  const projectGuidance = await loadProjectGuidance(root);
   if (task.provider !== 'claude') throw new Error('Claude Code só pode executar tarefas do provedor Claude.');
   const config = await readProjectConfigOptional();
   const options = await listOrchestrationOptions();
@@ -833,6 +832,7 @@ async function startClaudeCodeTask(context, sessions, input, taskJournal, worktr
   const checkout = task.worktree === 'current'
     ? { path: root, branch: 'current' }
     : await worktrees.open(root, { runId: input.runId, taskId: task.id, attempt: task.attempts, branch: task.worktree || undefined, baseBranch: task.base || undefined, seedIncludedFiles: task.worktreeNeedsSeed === true, existingPath: task.worktreePath || undefined });
+  const projectGuidance = await loadProjectGuidance(checkout.path);
   const continuity = await taskJournal.readContext(root, input.runId, task.id).catch(error => ({ verified: false, error: error.message || String(error), text: '' }));
   if (!continuity.verified) throw new Error(`O contexto da tarefa não pôde ser lido do diário local: ${continuity.error || 'registro não confirmado'}`);
   const detectedMemoryScope = await projectAiMemoryScope(root, config);
@@ -937,7 +937,6 @@ async function startPlannedLichTask(context, input, taskJournal, memoryRuntime) 
   requireTrustedWorkspace('Iniciar um agente Lich');
   const root = path.resolve(String(input.root || workspaceRoot()));
   const task = input.task;
-  const projectGuidance = await loadProjectGuidance(root);
   const config = await readProjectConfigOptional();
   const options = await listOrchestrationOptions();
   const allowed = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(item => item.cliKind).map(item => item.id);
@@ -962,6 +961,7 @@ async function startPlannedLichTask(context, input, taskJournal, memoryRuntime) 
     }
   }
   await ensureLichCheckoutAvailable(executable, root, branch, existingWorktree ? sessionRoot : useCurrentCheckout ? root : '');
+  const projectGuidance = await loadProjectGuidance(sessionRoot);
   const memoryTaskPath = task.memory?.taskPagePath || `orchestrator/tasks/${input.runId}/${task.id}.md`;
   const memoryAgentPath = `orchestrator/tasks/${input.runId}/${task.id}/agents/${provider}-attempt-${Math.max(1, Number(task.attempts) || 1)}.md`;
   const detectedMemoryScope = await projectAiMemoryScope(root, config);

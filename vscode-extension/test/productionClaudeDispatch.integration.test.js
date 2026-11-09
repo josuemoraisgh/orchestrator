@@ -71,6 +71,7 @@ test('production Claude dispatcher composes an isolated Git checkout with verifi
   const runtime = new AiMemoryRuntime(path.join(scratch, 'memory-runtime'), async () => memoryExecutable);
   const taskJournal = new TaskJournal(storageRoot);
   const worktrees = new GitWorktrees(storageRoot);
+  const openWorktree = worktrees.open.bind(worktrees);
   const sessions = new ClaudeCodeSessions();
   const originalPath = process.env.PATH;
   const originalPathExt = process.env.PATHEXT;
@@ -105,6 +106,7 @@ test('production Claude dispatcher composes an isolated Git checkout with verifi
 
   await fs.mkdir(path.join(projectRoot, '.ai'), { recursive: true });
   await fs.mkdir(path.join(projectRoot, 'src'), { recursive: true });
+  await fs.writeFile(path.join(projectRoot, 'AGENTS.md'), '# Root guidance\nROOT_CHECKOUT_GUIDANCE\n');
   await fs.writeFile(path.join(projectRoot, 'src', 'baseline.txt'), 'baseline\n');
   cp.execFileSync('git', ['init', '-b', 'main'], { cwd: projectRoot, stdio: 'ignore' });
   cp.execFileSync('git', ['config', 'user.email', 'orchestrator-test@example.invalid'], { cwd: projectRoot });
@@ -158,6 +160,12 @@ test('production Claude dispatcher composes an isolated Git checkout with verifi
     process.env.PATHEXT = `${process.env.PATHEXT || '.EXE;.CMD;.BAT'};.CMD`;
   }
   vscodeState.projectRoot = projectRoot;
+  worktrees.open = async (...args) => {
+    const checkout = await openWorktree(...args);
+    worktreePath = checkout.path;
+    await fs.writeFile(path.join(checkout.path, 'AGENTS.md'), '# Worktree guidance\nWORKTREE_CHECKOUT_GUIDANCE\n');
+    return checkout;
+  };
 
   const opened = await startClaudeCodeTask({
     globalStorageUri: { fsPath: storageRoot },

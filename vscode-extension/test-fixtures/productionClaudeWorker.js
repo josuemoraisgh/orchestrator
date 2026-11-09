@@ -44,6 +44,18 @@ async function startServer(server) {
 }
 
 async function main() {
+  const projectGuidance = await fs.readFile(path.join(process.cwd(), 'AGENTS.md'), 'utf8');
+  assert.match(projectGuidance, /WORKTREE_CHECKOUT_GUIDANCE/, 'worker starts with guidance from its actual checkout');
+  assert.doesNotMatch(projectGuidance, /ROOT_CHECKOUT_GUIDANCE/, 'the original project-root version is not used for the isolated checkout');
+  const promptLine = await new Promise((resolve, reject) => {
+    const input = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+    input.once('line', line => { input.close(); resolve(line); });
+    input.once('error', reject);
+  });
+  const prompt = JSON.parse(promptLine);
+  const promptText = prompt.message.content.map(part => part.text || '').join('\n');
+  assert.match(promptText, /WORKTREE_CHECKOUT_GUIDANCE/, 'the task prompt includes guidance from its actual checkout');
+  assert.doesNotMatch(promptText, /ROOT_CHECKOUT_GUIDANCE/, 'the task prompt excludes a stale project-root instruction');
   const args = process.argv.slice(2);
   const configIndex = args.indexOf('--mcp-config');
   assert.ok(configIndex >= 0, 'Claude session supplied the production MCP config');
