@@ -113,8 +113,16 @@ test('Orchestrator chat gates sending on coordinator readiness and workspace tru
   const input = elements.get('input');
   const send = elements.get('send');
   const recover = elements.get('recoverCoordinator');
+  const retryState = elements.get('retryState');
   assert.equal(messages.length, 1);
   assert.equal(messages[0].command, 'ready');
+  onMessage({ data: { type: 'stateError', text: 'State exceeded 15 seconds.' } });
+  assert.equal(retryState.hidden, false);
+  assert.match(elements.get('meta').textContent, /Falha ao carregar/);
+  assert.match(elements.get('error').textContent, /15 seconds/);
+  retryState.onclick();
+  assert.equal(retryState.hidden, true);
+  assert.equal(messages.at(-1).command, 'ready');
 
   onMessage({ data: { type: 'state', workspaceTrusted: true, modelAvailable: false, coordinatorStatus: 'Claude: perfil não cadastrado', threads: [], messages: [], taskRuns: [] } });
   assert.equal(input.disabled, true);
@@ -123,8 +131,8 @@ test('Orchestrator chat gates sending on coordinator readiness and workspace tru
   assert.match(input.placeholder, /Configura/);
   input.value = 'Não enviar sem coordenador';
   input.onkeydown({ key: 'Enter', shiftKey: false, preventDefault() {} });
-  assert.equal(messages.length, 1);
-  assert.equal(messages[0].command, 'ready');
+  assert.equal(messages.length, 2);
+  assert.equal(messages.at(-1).command, 'ready');
 
   onMessage({ data: { type: 'state', workspaceTrusted: true, modelAvailable: false, coordinatorProfileRecoveryAvailable: true, coordinatorStatus: 'Claude: perfil não cadastrado', threads: [], messages: [], taskRuns: [] } });
   assert.equal(input.disabled, true);
