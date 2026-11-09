@@ -18,7 +18,7 @@ async function latestRelease(repo) {
   const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
     headers: {
       accept: 'application/vnd.github+json',
-      'user-agent': 'production-orchestrator-release-builder'
+      'user-agent': 'orchestrator-ai-release-builder'
     }
   });
   if (!response.ok) throw new Error(`GitHub release lookup failed for ${repo}: HTTP ${response.status}`);

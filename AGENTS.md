@@ -1,8 +1,11 @@
-# Production Orchestrator — Engineering Protocol
+# Orchestrator-AI — Engineering Protocol
 
 This repository builds a generic VS Code extension that contributes the
-Orquestrador custom agent. The agent coordinates software production for any
-project through VS Code Chat, lich agent sessions, and ai-memory handoffs.
+Orquestrador custom agent. It coordinates software production for any project
+through its own task/session runtime, supported VS Code and provider APIs, Git
+worktrees, and the managed AI Memory runtime. Lich is a behavioral reference;
+the remaining compatibility adapter is transitional and must not become a new
+product dependency.
 
 ## Start of work
 
@@ -13,6 +16,11 @@ project through VS Code Chat, lich agent sessions, and ai-memory handoffs.
    `vscode-extension/skills/` as applicable.
 4. For cross-session or cross-agent continuity, use ai-memory when configured;
    project requirements and decisions stay in `.ai/specs/`.
+5. Lich may be inspected read-only as a design reference, as explicitly
+   requested by the user. Implement equivalent behavior independently through
+   supported VS Code/provider interfaces and Git. Do not copy Lich source,
+   assets, or private protocols. Use AI Memory's supported runtime/API and
+   preserve its required license notices.
 
 ## Engineering loop
 
@@ -54,3 +62,7 @@ their exact versions, URLs, and digests in `vscode-extension/upstream-releases.j
 The extension installs only the pinned assets from its own package and verifies
 each downloaded archive before extraction. It must not execute an unverified
 installer or silently accept a missing digest.
+
+## VS Code validation
+
+When validating an installed extension, leave the user's active VS Code window untouched. Install the candidate package for the same user profile, open a separate VS Code window with the target workspace, and inspect that window's extension-host log and runtime behavior. Do not claim runtime validation if the separate window or target workspace could not be opened. After validation, close every test window gracefully and verify that its VS Code process tree exited before finishing the turn. Identify test processes by their dedicated `--user-data-dir` and `--extensions-dir`; never close a process belonging to the user's regular profile. Avoid leaving multiple candidate windows open between test runs.

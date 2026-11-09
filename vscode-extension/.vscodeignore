@@ -5,8 +5,14 @@
 **/*.map
 **/*.ts
 scripts/**
+test/**
 node_modules/**
 !node_modules/yauzl/**
+!node_modules/ignore/**
 !node_modules/pend/**
+!node_modules/proper-lockfile/**
+!node_modules/graceful-fs/**
+!node_modules/retry/**
+!node_modules/signal-exit/**
 package-lock.json
 *.vsix

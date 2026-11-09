@@ -1,0 +1,3 @@
+{
+  "workspaceTrustDescription": "Orchestrator chat and settings remain available in Restricted Mode. Provider requests, Lich tasks, project initialization, dependency installation, upstream synchronization, and builds require a trusted workspace."
+}
