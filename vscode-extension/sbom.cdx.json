@@ -4,7 +4,7 @@
   "specVersion": "1.5",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-09T16:15:34.412Z",
+    "timestamp": "2026-11-09T16:36:32.893Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -18,13 +18,13 @@
       }
     ],
     "component": {
-      "bom-ref": "orchestrator-ai@0.1.84",
+      "bom-ref": "orchestrator-ai@0.1.85",
       "type": "application",
       "name": "Orchestrator-AI",
-      "version": "0.1.84",
+      "version": "0.1.85",
       "scope": "required",
       "description": "A project-neutral VS Code coordinator with managed AI Memory continuity and native agent orchestration.",
-      "purl": "pkg:npm/orchestrator-ai@0.1.84",
+      "purl": "pkg:npm/orchestrator-ai@0.1.85",
       "licenses": [
         {
           "license": {
@@ -321,7 +321,7 @@
   ],
   "dependencies": [
     {
-      "ref": "orchestrator-ai@0.1.84",
+      "ref": "orchestrator-ai@0.1.85",
       "dependsOn": [
         "pkg:github/akitaonrails/ai-memory@3.4.4",
         "pkg:npm/ignore@7.0.14",

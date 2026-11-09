@@ -89,6 +89,53 @@ test('generated Orchestrator chat JavaScript parses before it is sent to VS Code
   assert.doesNotThrow(() => new vm.Script(script, { filename: 'orchestrator-home-webview.js' }));
 });
 
+test('Orchestrator chat gates sending on coordinator readiness and workspace trust', () => {
+  const html = OrchestratorHomeView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
+  const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  assert.match(html, /<textarea id="input" disabled/);
+  assert.match(html, /<button class="send" id="send" disabled/);
+
+  const elements = new Map();
+  class Element {
+    constructor(id = '') { this.id = id; this.children = []; this.value = ''; this.disabled = false; this.hidden = false; this.textContent = ''; this.placeholder = ''; this.scrollHeight = 0; }
+    append(...children) { this.children.push(...children); }
+    replaceChildren(...children) { this.children = children; }
+  }
+  const document = {
+    getElementById(id) { if (!elements.has(id)) elements.set(id, new Element(id)); return elements.get(id); },
+    createElement() { return new Element(); }
+  };
+  const messages = [];
+  let onMessage;
+  const window = { addEventListener(type, handler) { if (type === 'message') onMessage = handler; } };
+  new vm.Script(script).runInNewContext({ document, window, acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) }) });
+  const input = elements.get('input');
+  const send = elements.get('send');
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].command, 'ready');
+
+  onMessage({ data: { type: 'state', workspaceTrusted: true, modelAvailable: false, coordinatorStatus: 'Claude: perfil não cadastrado', threads: [], messages: [], taskRuns: [] } });
+  assert.equal(input.disabled, true);
+  assert.equal(send.disabled, true);
+  assert.match(input.placeholder, /Configura/);
+  input.value = 'Não enviar sem coordenador';
+  input.onkeydown({ key: 'Enter', shiftKey: false, preventDefault() {} });
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].command, 'ready');
+
+  onMessage({ data: { type: 'state', workspaceTrusted: true, modelAvailable: true, threads: [], messages: [], taskRuns: [] } });
+  assert.equal(input.disabled, false);
+  assert.equal(send.disabled, false);
+  input.value = 'Pergunta autorizada';
+  input.onkeydown({ key: 'Enter', shiftKey: false, preventDefault() {} });
+  assert.equal(messages.at(-1).command, 'send');
+  assert.equal(messages.at(-1).text, 'Pergunta autorizada');
+
+  onMessage({ data: { type: 'busy', value: true } });
+  assert.equal(input.disabled, true);
+  assert.equal(send.disabled, true);
+});
+
 test('all static settings webview element references exist in the generated HTML', () => {
   const html = OrchestratorSettingsView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
   const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
