@@ -61,4 +61,68 @@ test('Orchestrator review UI exposes the corrective feedback action', () => {
   const html = view.html({ cspSource: 'vscode-webview://test' });
   assert.match(html, /Solicitar ajustes ao agente/);
   assert.match(html, /requestTaskChanges/);
+  assert.match(html, /Cancelar tarefa/);
+  assert.match(html, /cancelTask/);
+});
+
+test('cancelling a selected running task stops and releases only that task', async () => {
+  const first = { id: 'task-a', status: 'running', sessionId: 'session-a', provider: 'codex', executor: 'codex-app-server', history: [] };
+  const second = { id: 'task-b', status: 'running', sessionId: 'session-b', provider: 'claude', executor: 'claude-code-cli', history: [] };
+  let runs = [{ id: 'run-1', status: 'running', tasks: [first, second] }];
+  const stopped = [];
+  const released = [];
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project' });
+  view.taskActions = { stop: async input => { stopped.push(input.session); return { stopped: true }; } };
+  view.sharedTaskSlots = { release: async (...args) => { released.push(args); } };
+  view.recordTaskJournal = async () => true;
+  view.recordTaskMemory = async () => ({ verified: true });
+  view.refreshState = async () => {};
+
+  const result = await view.cancelTask('run-1', 'task-a');
+
+  assert.deepEqual(result, { status: 'cancelled', error: '' });
+  assert.deepEqual(stopped, ['session-a']);
+  assert.deepEqual(released, [['C:/project', 'run-1', 'task-a']]);
+  assert.equal(runs[0].tasks[0].status, 'cancelled');
+  assert.equal(runs[0].tasks[1].status, 'running');
+  assert.equal(runs[0].status, 'running');
+});
+
+test('failed task cancellation remains running and keeps its resource reservation', async () => {
+  const task = { id: 'task-a', status: 'running', sessionId: 'session-a', executor: 'codex-app-server', history: [] };
+  let runs = [{ id: 'run-1', status: 'running', tasks: [task] }];
+  let released = false;
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project' });
+  view.taskActions = { stop: async () => ({ stopped: false, sessionState: 'busy' }) };
+  view.sharedTaskSlots = { release: async () => { released = true; } };
+  view.recordTaskJournal = async () => true;
+  view.refreshState = async () => {};
+
+  const result = await view.cancelTask('run-1', 'task-a');
+
+  assert.equal(result.status, 'running');
+  assert.match(result.error, /busy/);
+  assert.equal(task.status, 'running');
+  assert.equal(released, false);
+});
+
+test('cancellation during startup marks only the chosen task for stop on dispatch return', async () => {
+  const task = { id: 'task-a', status: 'starting', history: [] };
+  let runs = [{ id: 'run-1', status: 'running', tasks: [task] }];
+  let stopCalled = false;
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project' });
+  view.taskActions = { stop: async () => { stopCalled = true; return { stopped: true }; } };
+  view.recordTaskJournal = async () => true;
+
+  const result = await view.cancelTask('run-1', 'task-a');
+
+  assert.deepEqual(result, { status: 'cancelling' });
+  assert.equal(task.status, 'cancelling');
+  assert.equal(stopCalled, false);
 });
