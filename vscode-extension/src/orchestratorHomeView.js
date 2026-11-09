@@ -972,7 +972,8 @@ class OrchestratorHomeView {
     let failed = false;
     for (const task of toStop) {
       try {
-        await this.taskActions.stop({ session: task.sessionId, projectPath: task.projectPath, worktreePath: task.worktreePath });
+        const stopped = await this.taskActions.stop({ session: task.sessionId, projectPath: task.projectPath, worktreePath: task.worktreePath });
+        if (stopped?.stopped === false || stopped?.error) throw new Error(stopped.error || `A sessão não confirmou a parada (${stopped.sessionState || 'estado desconhecido'}).`);
         await this.sharedTaskSlots.release(workspace, run.id, task.id);
         task.status = 'cancelled'; task.history.push({ at: Date.now(), event: 'cancelled', detail: `Sessão ${task.sessionName || task.sessionId} estacionada; checkout preservado.` });
       } catch (error) {
@@ -1587,7 +1588,8 @@ class OrchestratorHomeView {
           }
           if (run.status === 'cancelling' && task.status === 'cancelling' && task.sessionId) {
             try {
-              await this.taskActions.stop({ session: task.sessionId, projectPath: task.projectPath, worktreePath: task.worktreePath });
+              const stopped = await this.taskActions.stop({ session: task.sessionId, projectPath: task.projectPath, worktreePath: task.worktreePath });
+              if (stopped?.stopped === false || stopped?.error) throw new Error(stopped.error || `A sessão não confirmou a parada (${stopped.sessionState || 'estado desconhecido'}).`);
               await this.sharedTaskSlots.release(workspace, run.id, task.id);
               task.status = 'cancelled'; task.history.push({ at: Date.now(), event: 'recovered-cancel', detail: 'Sessão estacionada durante a recuperação após reinício.' });
             } catch (error) { task.error = error.message || String(error); }

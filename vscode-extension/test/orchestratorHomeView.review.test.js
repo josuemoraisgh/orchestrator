@@ -8,7 +8,8 @@ const originalLoad = Module._load;
 const vscode = {
   lm: { tools: [] },
   CancellationTokenSource: class { constructor() { this.token = {}; } dispose() {} },
-  window: { showInputBox: async () => 'Please add the missing boundary check.' }
+  window: { showInputBox: async () => 'Please add the missing boundary check.' },
+  workspace: { isTrusted: true }
 };
 Module._load = function(request, parent, isMain) {
   if (request === 'vscode') return vscode;
@@ -125,4 +126,48 @@ test('cancellation during startup marks only the chosen task for stop on dispatc
   assert.deepEqual(result, { status: 'cancelling' });
   assert.equal(task.status, 'cancelling');
   assert.equal(stopCalled, false);
+});
+
+test('cancelRun keeps the run and task active when the adapter cannot confirm stop', async () => {
+  const task = { id: 'task-a', status: 'running', sessionId: 'session-a', executor: 'codex-app-server', history: [] };
+  let runs = [{ id: 'run-1', status: 'running', tasks: [task] }];
+  let released = false;
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project' });
+  view.taskActions = { stop: async () => ({ stopped: false, sessionState: 'busy' }) };
+  view.sharedTaskSlots = { release: async () => { released = true; } };
+  view.recordTaskJournal = async () => true;
+  view.recordRunJournal = async () => true;
+  view.recordTaskMemory = async () => ({ verified: true });
+  view.saveRuns = async value => { runs = value; };
+
+  await view.cancelRun('run-1');
+
+  assert.equal(task.status, 'cancelling');
+  assert.match(task.error, /busy/);
+  assert.equal(runs[0].status, 'cancelling');
+  assert.equal(released, false);
+});
+
+test('recovery keeps a cancelling session reserved until stop is confirmed', async () => {
+  const task = { id: 'task-a', status: 'cancelling', sessionId: 'session-a', executor: 'codex-app-server', history: [] };
+  let runs = [{ id: 'run-1', status: 'cancelling', tasks: [task] }];
+  let released = false;
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.view = {};
+  view.polling = false;
+  view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project' });
+  view.taskActions = { stop: async () => ({ stopped: false, sessionState: 'busy' }) };
+  view.sharedTaskSlots = { release: async () => { released = true; } };
+  view.refreshState = async () => {};
+
+  await view.pollTasks(true);
+
+  assert.equal(task.status, 'cancelling');
+  assert.match(task.error, /busy/);
+  assert.equal(runs[0].status, 'cancelling');
+  assert.equal(released, false);
+  assert.equal(view.polling, false);
 });

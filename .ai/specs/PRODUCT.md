@@ -1292,6 +1292,9 @@ independent tasks enter dispatch concurrently under a configured limit of two.
 It verifies both task states and leases, then cancels task A and confirms only
 its session stops and lease is released while task B remains running. Separate
 unit cases cover cancellation during startup, failed stop preservation, and
-review feedback. Full suite: 125 passed, 0 failed, 6 optional integrations
-skipped. This does not claim live-provider cancellation under load or native
-VS Code runtime validation.
+review feedback. Run-wide cancellation and startup recovery now also require
+an affirmative stop result before marking a task cancelled or releasing its
+slot; a negative result leaves the task visible as cancelling and reserved.
+Full suite: 128 passed, 0 failed, 6 optional integrations skipped. This does
+not claim live-provider cancellation under load or native VS Code runtime
+validation.
