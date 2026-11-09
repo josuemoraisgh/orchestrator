@@ -2,6 +2,7 @@
 
 const readline = require('node:readline');
 const { listAiMemoryTools, callAiMemoryTool, readAiMemoryPage, toolResultText } = require('./aiMemoryMcp');
+const { redactSensitiveText } = require('./secretRedaction');
 
 const config = {
   executable: process.env.ORCHESTRATOR_MEMORY_EXECUTABLE || '',
@@ -78,7 +79,7 @@ async function callTool(name, args) {
   if (name !== 'write_task_context') throw new Error(`Unsupported Orchestrator AI Memory tool: ${name}`);
   if (args?.target !== 'agent') throw new Error('Workers may write only their own task-scoped attempt page; the coordinator owns the shared task page.');
   const info = targetInfo('agent');
-  const body = String(args?.body || '').trim();
+  const body = redactSensitiveText(String(args?.body || '').trim(), 30000);
   if (!info.path || !info.marker) throw new Error(`The ${args?.target} AI Memory page is not configured.`);
   if (!body || body.length > 30000) throw new Error('Memory body must contain 1 to 30000 characters.');
   if (!/^#\s+\S/m.test(body)) throw new Error('Memory body must start with a Markdown H1 heading.');

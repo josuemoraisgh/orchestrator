@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const lockfile = require('proper-lockfile');
+const { redactSensitiveText } = require('./secretRedaction');
 
 const LOCK_OPTIONS = {
   realpath: false,
@@ -28,11 +29,7 @@ function boundedText(value, max = MAX_RESULT_CHARS) {
 }
 
 function redactText(value, max = MAX_RESULT_CHARS) {
-  return String(value || '')
-    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+\/-]+=*/gi, '$1 [REDACTED]')
-    .replace(/\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, '[REDACTED TOKEN]')
-    .replace(/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret|client[_-]?secret)\s*[:=]\s*["']?)[^\s"',;]+/gi, '$1[REDACTED]')
-    .slice(0, max);
+  return redactSensitiveText(value, max);
 }
 
 function taskSnapshot(run, task, event) {

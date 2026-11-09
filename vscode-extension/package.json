@@ -2,7 +2,7 @@
   "name": "orchestrator-ai",
   "displayName": "Orchestrator-AI",
   "description": "A project-neutral VS Code coordinator with managed AI Memory continuity and native agent orchestration.",
-  "version": "0.1.78",
+  "version": "0.1.80",
   "publisher": "local",
   "license": "MIT",
   "engines": {

@@ -1,4 +1,5 @@
 const vscode = require('vscode');
+const { redactSensitiveText } = require('./secretRedaction');
 const crypto = require('node:crypto');
 const { createWebviewSecurity } = require('./webviewSecurity');
 const { explicitHandoffRequest, handoffPermittedByCurrentRequest, parsePlanResponse, validatePlan } = require('./taskPlan');
@@ -709,7 +710,7 @@ class OrchestratorHomeView {
       ...memoryScope,
       path: task.memory.taskPagePath,
       title: `Orchestrator task ${run.id}/${task.id}: ${task.title}`,
-      body: taskBody,
+      body: redactSensitiveText(taskBody),
       tags: ['orchestrator', 'task']
     };
     if (currentPageId) input.expected_page_id = currentPageId;
@@ -796,7 +797,7 @@ class OrchestratorHomeView {
       const input = {
         ...scope, path: memory.agentPagePath,
         title: `Orchestrator attempt ${task.id} ${task.attempts || 1}: ${task.title || task.id}`,
-        body, tags: ['orchestrator', 'task-attempt'], create_only: true
+        body: redactSensitiveText(body), tags: ['orchestrator', 'task-attempt'], create_only: true
       };
       const result = await this.invokeMemoryTool(writeTool, input, undefined, scope);
       const writeText = toolResultText(result);

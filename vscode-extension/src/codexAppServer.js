@@ -2,6 +2,7 @@
 
 const cp = require('node:child_process');
 const { randomUUID } = require('node:crypto');
+const { redactSensitiveText } = require('./secretRedaction');
 
 const MAX_LINE_BYTES = 32 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30000;
@@ -22,8 +23,8 @@ function tomlArray(values) {
 }
 
 function safeDiagnostic(value) {
-  return String(value || '')
-    .replace(/\b(?:sk-ant-[A-Za-z0-9_-]+|sk-[A-Za-z0-9_-]{16,})\b/g, '[credential redacted]')
+  return redactSensitiveText(value, 2000)
+    .replace(/\[REDACTED CREDENTIAL\]/g, '[credential redacted]')
     .replace(/[\u0000-\u001f\u007f]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
