@@ -7,6 +7,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const test = require('node:test');
 const { TaskJournal } = require('../src/taskJournal');
+const { SharedTaskSlots } = require('../src/sharedTaskSlots');
 
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
@@ -52,19 +53,28 @@ async function createFixture(t, stopResult = { stopped: true }) {
   const stopCalls = [];
   const schedulingCalls = [];
   const memoryCalls = [];
+  const liveSessions = [];
   const view = Object.create(OrchestratorHomeView.prototype);
   view.context = { workspaceState: {
     get(key, fallback) { return key === 'orchestratorAi.taskRuns' ? savedRuns : fallback; },
     async update(key, value) { if (key === 'orchestratorAi.taskRuns') savedRuns = value; }
   } };
   view.getState = async () => state;
-  view.sharedTaskSlots = { release: async (...args) => { stopCalls.push(['release-slot', ...args]); } };
+  view.sharedTaskSlots = new SharedTaskSlots(path.join(root, 'slots'), 'handoff-test-owner');
+  view.schedulingRuns = new Map();
+  view.rescheduleRuns = new Set();
+  view.schedulingQueue = Promise.resolve();
+  view.refreshState = async () => {};
+  view.settlePendingDispatchAbort = async () => false;
+  view.releaseCompletedCheckoutSessions = async () => {};
   view.taskActions = {
     createTaskHandoff: (projectRoot, input) => journal.createHandoff(projectRoot, input),
     claimTaskHandoff: (projectRoot, id, recipient) => journal.claimHandoff(projectRoot, id, recipient),
     cancelTaskHandoff: (projectRoot, id) => journal.cancelHandoff(projectRoot, id),
     releaseTaskHandoff: (projectRoot, id, recipient) => journal.releaseClaimedHandoff(projectRoot, id, recipient),
     recordTaskJournal: (projectRoot, currentRun, currentTask, event) => journal.record(projectRoot, currentRun, currentTask, event),
+    canUseWorktree: async () => false,
+    listSessions: async () => [],
     start: async input => {
       assert.equal(input.runId, run.id);
       assert.equal(input.task.id, task.id);
@@ -80,28 +90,28 @@ async function createFixture(t, stopResult = { stopped: true }) {
       };
     },
     recordHandoffSessionStarted: (projectRoot, id, recipient, sessionId) => journal.recordHandoffSessionStarted(projectRoot, id, recipient, sessionId),
-    stop: async input => { stopCalls.push(['stop', input]); return stopResult; }
+    stop: async input => {
+      stopCalls.push(['stop', input]);
+      const result = stopResult;
+      if (result.stopped) liveSessions.splice(0, liveSessions.length, ...liveSessions.filter(session => session.id !== input.session));
+      return result;
+    }
+  };
+  view.taskActions.listSessions = async () => liveSessions;
+  const startTask = view.taskActions.start;
+  view.taskActions.start = async input => {
+    const started = await startTask(input);
+    liveSessions.push({ id: started.sessionId, projectPath: project, state: 'busy' });
+    return started;
   };
   view.recordTaskMemory = async (...args) => { memoryCalls.push(args); return { verified: true }; };
-  view.scheduleRun = async runId => {
-    schedulingCalls.push(runId);
-    const currentRun = savedRuns.find(item => item.id === runId);
-    const currentTask = currentRun.tasks.find(item => item.id === task.id);
-    currentTask.status = 'starting';
-    await view.recordTaskJournal(project, currentRun, currentTask, 'dispatch-starting');
-    Object.assign(currentTask, await view.taskActions.start({ runId, task: currentTask, handoff: currentTask.handoff }));
-    currentTask.status = 'running';
-    await view.recordTaskJournal(project, currentRun, currentTask, 'session-started');
-    const receipt = await view.taskActions.recordHandoffSessionStarted(project, currentTask.handoffId, currentTask.handoffRecipient, currentTask.sessionId);
-    assert.equal(receipt.recorded, true);
-    currentTask.handoffReceipt = { status: 'session-started', sessionId: currentTask.sessionId };
-    await view.recordTaskJournal(project, currentRun, currentTask, 'handoff-session-started');
-    await view.context.workspaceState.update('orchestratorAi.taskRuns', savedRuns);
-  };
+  view.taskActions.recordHandoffSessionStarted = (projectRoot, id, recipient, sessionId) => journal.recordHandoffSessionStarted(projectRoot, id, recipient, sessionId);
+  const scheduleRun = view.scheduleRun.bind(view);
+  view.scheduleRun = async runId => { schedulingCalls.push(runId); return scheduleRun(runId); };
   return { project, journal, run, task, view, state, getSavedRuns: () => savedRuns, stopCalls, schedulingCalls, memoryCalls };
 }
 
-test('cross-provider handoff claims, parks, journals, and schedules the same task', async t => {
+test('cross-provider handoff runs through the production scheduler with deterministic adapters', async t => {
   const fixture = await createFixture(t);
   const result = await fixture.view.handoffTask(fixture.run.id, fixture.task.id, {
     provider: 'codex', executor: 'codex-app-server', profileId: 'codex-profile',
@@ -118,7 +128,11 @@ test('cross-provider handoff claims, parks, journals, and schedules the same tas
   assert.equal(fixture.task.handoff, 'Objective, verified progress, changed files, and next step.');
   assert.equal(result.handoffId, fixture.task.handoffId);
   assert.deepEqual(fixture.schedulingCalls, [fixture.run.id]);
-  assert.equal(fixture.memoryCalls.length, 1);
+  assert.equal(fixture.memoryCalls.length, 2);
+  assert.match(fixture.memoryCalls[0][2], /Handoff claude/);
+  assert.match(fixture.memoryCalls[1][2], /Tarefa aprovada e atribuída ao agente/);
+  assert.equal(fixture.task.handoffReceipt.status, 'session-started');
+  assert.equal(fixture.task.handoffReceipt.sessionId, 'codex-session-2');
 
   const handoff = (await fixture.journal.listHandoffs(fixture.project, { runId: fixture.run.id, taskId: fixture.task.id }))[0];
   assert.equal(handoff.status, 'session-started');
@@ -132,6 +146,11 @@ test('cross-provider handoff claims, parks, journals, and schedules the same tas
   assert.equal(persisted.latest.handoffId, handoff.id);
   assert.equal(persisted.latest.handoffRecipient, handoff.claimedBy);
   assert.equal(persisted.latest.sessionId, 'codex-session-2');
+  assert.equal(persisted.latest.event, 'handoff-session-started');
+  const slots = await fixture.view.sharedTaskSlots.snapshot(fixture.project, async () => [
+    { id: 'codex-session-2', projectPath: fixture.project, state: 'busy' }
+  ]);
+  assert.equal(slots.active, 1, JSON.stringify(slots));
 });
 
 test('failed parking rolls back a claimed handoff and preserves the original worker assignment', async t => {
