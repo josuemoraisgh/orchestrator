@@ -6,6 +6,29 @@ const { redactSensitiveText } = require('./secretRedaction');
 
 const MAX_LINE_BYTES = 32 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30000;
+const TASK_MEMORY_TOOL_DESCRIPTIONS = new Map([
+  ['read_task_context', 'Read the verified shared AI Memory page for this task or this agent attempt. Page paths and project scope are fixed by Orchestrator.'],
+  ['write_task_context', 'Update only this agent attempt page in the official AI Memory runtime. The path and project scope are fixed; include a complete continuity update and preserve the required agent marker. The coordinator owns the shared task page.']
+]);
+
+function memoryToolElicitationResponse(params, memoryBridge) {
+  const metadata = params?._meta && typeof params._meta === 'object' && !Array.isArray(params._meta) ? params._meta : {};
+  const toolDescription = typeof metadata.tool_description === 'string' ? metadata.tool_description : '';
+  const describedTool = [...TASK_MEMORY_TOOL_DESCRIPTIONS].find(([, description]) => description === toolDescription)?.[0] || '';
+  const toolName = String(metadata.tool_name || metadata.toolName || describedTool);
+  const properties = params?.requestedSchema?.properties;
+  const safeSchema = params?.requestedSchema?.type === 'object'
+    && properties && typeof properties === 'object' && !Array.isArray(properties)
+    && Object.keys(properties).length === 0
+    && (!Array.isArray(params.requestedSchema.required) || params.requestedSchema.required.length === 0);
+  const approved = Boolean(memoryBridge?.executable && memoryBridge?.connection?.url)
+    && params?.serverName === 'orchestrator_memory'
+    && params?.mode === 'form'
+    && metadata.codex_approval_kind === 'mcp_tool_call'
+    && TASK_MEMORY_TOOL_DESCRIPTIONS.has(toolName)
+    && safeSchema;
+  return { action: approved ? 'accept' : 'decline', content: approved ? {} : null, _meta: null };
+}
 
 function deferred() {
   let resolve;
@@ -261,6 +284,17 @@ class CodexAppServerSessions {
           ? await session.request.answerUserInput(message.params?.questions || [])
           : {};
         result = { answers: answers || {} };
+      } else if (method === 'mcpServer/elicitation/request') {
+        result = memoryToolElicitationResponse(message.params, session.request.memoryBridge);
+        const elicitationMeta = message.params?._meta && typeof message.params._meta === 'object' ? message.params._meta : {};
+        const toolDescription = typeof elicitationMeta.tool_description === 'string' ? elicitationMeta.tool_description : '';
+        const describedTool = [...TASK_MEMORY_TOOL_DESCRIPTIONS].find(([, description]) => description === toolDescription)?.[0] || '';
+        await session.request.onEvent?.({
+          type: 'codex-mcp-tool-approval',
+          serverName: String(message.params?.serverName || '').slice(0, 100),
+          toolName: String(elicitationMeta.tool_name || elicitationMeta.toolName || describedTool).slice(0, 120),
+          decision: result.action
+        });
       }
       const allowed = result ? false : method !== 'item/permissions/requestApproval' && typeof session.request.approveRequest === 'function'
         ? await session.request.approveRequest({ method, params: message.params || {} })
@@ -281,7 +315,11 @@ class CodexAppServerSessions {
         result = {};
       }
     } catch (error) {
-      result = method === 'item/permissions/requestApproval' ? { permissions: {}, scope: 'turn' } : {};
+      result = method === 'item/permissions/requestApproval'
+        ? { permissions: {}, scope: 'turn' }
+        : method === 'mcpServer/elicitation/request'
+          ? { action: 'decline', content: null, _meta: null }
+          : {};
       await session.request.onEvent?.({ type: 'approval-error', content: error.message || String(error) });
     }
     this.send(session, { id: message.id, result });
@@ -402,4 +440,4 @@ class CodexAppServerSessions {
   }
 }
 
-module.exports = { CodexAppServerSessions, memoryConfigArgs };
+module.exports = { CodexAppServerSessions, memoryConfigArgs, memoryToolElicitationResponse };

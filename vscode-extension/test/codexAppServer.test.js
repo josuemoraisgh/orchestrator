@@ -4,7 +4,39 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { PassThrough } = require('node:stream');
 const test = require('node:test');
-const { CodexAppServerSessions } = require('../src/codexAppServer');
+const { CodexAppServerSessions, memoryToolElicitationResponse } = require('../src/codexAppServer');
+
+test('Codex MCP approval accepts only the task-scoped AI Memory read and write tools', () => {
+  const memoryBridge = { executable: 'C:/tools/ai-memory.exe', connection: { url: 'http://127.0.0.1:43210' } };
+  const request = toolName => ({
+    serverName: 'orchestrator_memory', mode: 'form',
+    _meta: { codex_approval_kind: 'mcp_tool_call', tool_name: toolName },
+    requestedSchema: { type: 'object', properties: {} }
+  });
+
+  assert.deepEqual(memoryToolElicitationResponse(request('read_task_context'), memoryBridge), {
+    action: 'accept', content: {}, _meta: null
+  });
+  assert.deepEqual(memoryToolElicitationResponse(request('write_task_context'), memoryBridge), {
+    action: 'accept', content: {}, _meta: null
+  });
+  const codexApproval = request('');
+  codexApproval._meta = {
+    codex_approval_kind: 'mcp_tool_call',
+    tool_description: 'Read the verified shared AI Memory page for this task or this agent attempt. Page paths and project scope are fixed by Orchestrator.'
+  };
+  assert.equal(memoryToolElicitationResponse(codexApproval, memoryBridge).action, 'accept');
+  for (const unsafe of [
+    { ...request('shell'), serverName: 'orchestrator_memory' },
+    { ...request('read_task_context'), serverName: 'other_server' },
+    { ...request('read_task_context'), _meta: { ...request('read_task_context')._meta, codex_approval_kind: 'other' } },
+    { ...request('read_task_context'), requestedSchema: { type: 'object', properties: { path: { type: 'string' } } } },
+    { ...request('read_task_context'), _meta: undefined }
+  ]) {
+    assert.equal(memoryToolElicitationResponse(unsafe, memoryBridge).action, 'decline');
+  }
+  assert.equal(memoryToolElicitationResponse(request('read_task_context'), undefined).action, 'decline');
+});
 
 function fakeSpawn(options = {}) {
   const children = [];
