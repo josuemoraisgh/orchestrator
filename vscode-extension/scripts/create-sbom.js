@@ -135,5 +135,12 @@ const bom = {
   ]
 };
 
-fs.writeFileSync(path.join(root, 'sbom.cdx.json'), `${JSON.stringify(bom, null, 2)}\n`, 'utf8');
-process.stdout.write(`Wrote CycloneDX SBOM with ${bom.components.length} runtime components to vscode-extension/sbom.cdx.json\n`);
+const outputFlag = process.argv.indexOf('--output');
+if (outputFlag !== -1 && (!process.argv[outputFlag + 1] || process.argv[outputFlag + 1].startsWith('--'))) {
+  throw new Error('--output requires a file path.');
+}
+const outputPath = outputFlag === -1
+  ? path.join(root, 'sbom.cdx.json')
+  : path.resolve(root, process.argv[outputFlag + 1]);
+fs.writeFileSync(outputPath, `${JSON.stringify(bom, null, 2)}\n`, 'utf8');
+process.stdout.write(`Wrote CycloneDX SBOM with ${bom.components.length} runtime components to ${path.relative(root, outputPath) || 'sbom.cdx.json'}\n`);
