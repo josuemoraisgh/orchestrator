@@ -12,6 +12,17 @@ test('redacts quoted multiword secrets and preserves surrounding text', () => {
   assert.doesNotMatch(redacted, /duas palavras secretas|first second|abc\.def/);
 });
 
+test('preserves natural-language progress tokens and still redacts structured token fields', () => {
+  const progress = 'Progress token: CLAUDE_PROGRESS_abc123 is present.\n';
+  const structured = '{"token": "private-access-token", "access_token": "another-secret"}';
+  const redacted = redactSensitiveText(progress + structured);
+
+  assert.match(redacted, /Progress token: CLAUDE_PROGRESS_abc123 is present/);
+  assert.doesNotMatch(redacted, /private-access-token|another-secret/);
+  assert.match(redacted, /"token": "\[REDACTED\]"/);
+  assert.match(redacted, /"access_token": "\[REDACTED\]"/);
+});
+
 test('redacts provider tokens and complete private key blocks', () => {
   const value = [
     'github_pat_abcdefghijklmnopqrstuvwxyz123456',
