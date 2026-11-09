@@ -86,11 +86,11 @@ class GitWorktrees {
     if (baseBranch) {
       const requestedBase = String(baseBranch).trim();
       if (!requestedBase || requestedBase.length > 200 || requestedBase.startsWith('-') || requestedBase.includes('..') || requestedBase.includes('//') || requestedBase.endsWith('/') || requestedBase.endsWith('.')) {
-        throw new Error(`Nome de branch base invÃ¡lido: ${requestedBase}`);
+        throw new Error(`Nome de branch base inválido: ${requestedBase}`);
       }
       const baseRefName = `refs/heads/${requestedBase}`;
       baseRef = await git(['rev-parse', '--verify', '--quiet', `${baseRefName}^{commit}`], root)
-        .catch(() => { throw new Error(`A branch base local ${requestedBase} nÃ£o existe ou nÃ£o aponta para um commit.`); });
+        .catch(() => { throw new Error(`A branch base local ${requestedBase} não existe ou não aponta para um commit.`); });
     }
     const repoKey = crypto.createHash('sha256').update(root.toLocaleLowerCase()).digest('hex').slice(0, 20);
     const target = path.join(this.storageRoot, 'worktrees', repoKey, `${safePart(runId)}-${safePart(taskId)}-${Math.max(1, Number(attempt) || 1)}`);

@@ -65,7 +65,7 @@ async function findNodeExecutable() {
 
 async function coordinatorInvocation(profile, provider) {
   const executable = String(provider?.executablePath || '');
-  if (!executable) throw new Error('CLI do coordenador nÃ£o encontrada.');
+  if (!executable) throw new Error('CLI do coordenador não encontrada.');
   if (process.platform !== 'win32' || !/\.(?:ps1|cmd|bat)$/i.test(executable)) return { executable, prefixArgs: [] };
 
   const npmRoot = path.join(path.dirname(executable), 'node_modules');
@@ -82,7 +82,7 @@ async function coordinatorInvocation(profile, provider) {
       }
     } catch { /* Not the standard npm shim. */ }
   }
-  throw new Error(`${provider.name} usa um wrapper Windows sem executÃ¡vel nativo resolvÃ­vel. Configure o caminho do binÃ¡rio oficial diretamente.`);
+  throw new Error(`${provider.name} usa um wrapper Windows sem executável nativo resolvível. Configure o caminho do binário oficial diretamente.`);
 }
 
 function parseCodexModelCatalog(output) {

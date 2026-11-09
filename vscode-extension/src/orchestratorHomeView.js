@@ -891,15 +891,15 @@ class OrchestratorHomeView {
         if (!task.profileId && profiles.length > 1 && !selectedProfile) throw new Error(`Selecione um profileId Codex para a tarefa ${task.id}; há várias contas autorizadas.`);
         task.profileId = selectedProfile?.id || 'default-codex-cli-profile';
       } else if (task.executor === 'claude-code-cli' && (provider.id !== 'claude' || !provider.canRunClaudeCode)) {
-        throw new Error(`Claude Code CLI nÃ£o estÃ¡ disponÃ­vel para a tarefa ${task.id}.`);
+        throw new Error(`Claude Code CLI não está disponível para a tarefa ${task.id}.`);
       } else if (task.executor === 'claude-code-cli') {
         const profiles = (state.coordinatorProfiles || []).filter(profile => profile.providerId === 'claude' && profile.authorized);
         const selectedProfile = task.profileId
           ? profiles.find(profile => profile.id === task.profileId)
           : profiles.find(profile => profile.id === state.config?.orchestration?.profileId && state.config?.orchestration?.providerId === 'claude')
             || (profiles.length === 1 ? profiles[0] : undefined);
-        if (task.profileId && !selectedProfile) throw new Error(`O perfil Claude ${task.profileId} da tarefa ${task.id} nÃ£o estÃ¡ autorizado.`);
-        if (!task.profileId && profiles.length > 1 && !selectedProfile) throw new Error(`Selecione um profileId Claude para a tarefa ${task.id}; hÃ¡ vÃ¡rias contas autorizadas.`);
+        if (task.profileId && !selectedProfile) throw new Error(`O perfil Claude ${task.profileId} da tarefa ${task.id} não está autorizado.`);
+        if (!task.profileId && profiles.length > 1 && !selectedProfile) throw new Error(`Selecione um profileId Claude para a tarefa ${task.id}; há várias contas autorizadas.`);
         task.profileId = selectedProfile?.id || 'default-claude-cli-profile';
       }
     }

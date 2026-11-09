@@ -29,7 +29,7 @@ class OrchestratorSettingsView {
     }
     const panel = vscode.window.createWebviewPanel(
       'orchestratorAi.settings',
-      'Orquestrador: ConfiguraÃ§Ãµes',
+      'Orquestrador: Configurações',
       vscode.ViewColumn.Beside,
       { enableScripts: false, retainContextWhenHidden: true }
     );
@@ -133,10 +133,10 @@ class OrchestratorSettingsView {
         return this.send({ type: 'coordinatorModels', profileId, requestId: message.requestId, ...result });
       }
       if (!vscode.workspace.isTrusted && ['loadKnowledgeSearchFilters', 'searchKnowledge', 'createKnowledgePage', 'loadKnowledgePage', 'patchKnowledgePage', 'updateKnowledgeMetadata'].includes(message.type)) {
-        throw new Error('Confie neste workspace para acessar a memÃ³ria durÃ¡vel do projeto.');
+        throw new Error('Confie neste workspace para acessar a memória durável do projeto.');
       }
       if (!vscode.workspace.isTrusted && ['save', 'connectProvider', 'connectWorkerProvider', 'createCoordinatorProfile', 'connectCoordinatorProfile', 'authorizeCoordinatorProfile', 'setCoordinatorProfileConcurrency', 'renameCoordinatorProfile', 'removeCoordinatorProfile', 'initialize', 'installDependencies'].includes(message.type)) {
-        throw new Error('Confie neste workspace no VS Code para alterar configuraÃ§Ãµes do projeto, autenticar perfis ou instalar ferramentas.');
+        throw new Error('Confie neste workspace no VS Code para alterar configurações do projeto, autenticar perfis ou instalar ferramentas.');
       }
       if (message.type === 'loadKnowledgeSearchFilters') {
         const result = await this.actions.knowledgeSearchCapabilities();
@@ -190,7 +190,7 @@ class OrchestratorSettingsView {
       if (message.type === 'save') {
         await this.actions.saveSettings(message.settings);
         await this.refresh();
-        return this.send({ type: 'notice', level: 'success', text: 'ConfiguraÃ§Ãµes salvas. O perfil Orquestrador Configurado foi atualizado em .github/agents/.' });
+        return this.send({ type: 'notice', level: 'success', text: 'Configurações salvas. O perfil Orquestrador Configurado foi atualizado em .github/agents/.' });
       }
       if (message.type === 'connectProvider') {
         const text = await this.actions.connectProvider(message.providerId);
@@ -200,7 +200,7 @@ class OrchestratorSettingsView {
       if (message.type === 'connectWorkerProvider') {
         const providerId = String(message.providerId || '');
         const text = await this.actions.connectProvider(providerId);
-        this.authStatuses[providerId] = { status: 'unverified', text: 'Fluxo aberto; verifique a autenticaÃ§Ã£o da CLI.' };
+        this.authStatuses[providerId] = { status: 'unverified', text: 'Fluxo aberto; verifique a autenticação da CLI.' };
         await this.refresh();
         return this.send({ type: 'notice', level: 'info', text });
       }
@@ -213,11 +213,11 @@ class OrchestratorSettingsView {
       }
       if (message.type === 'createCoordinatorProfile') {
         const providerId = String(message.providerId || '');
-        const name = await vscode.window.showInputBox({ prompt: 'Nome reconhecÃ­vel para este perfil de coordenador', placeHolder: providerId === 'claude' ? 'Claude pessoal' : 'Codex trabalho', validateInput: value => String(value || '').trim() ? undefined : 'Informe um nome.' });
+        const name = await vscode.window.showInputBox({ prompt: 'Nome reconhecível para este perfil de coordenador', placeHolder: providerId === 'claude' ? 'Claude pessoal' : 'Codex trabalho', validateInput: value => String(value || '').trim() ? undefined : 'Informe um nome.' });
         if (!name) return;
         const profile = await this.actions.createCoordinatorProfile(providerId, name, Boolean(message.isolated));
         await this.refresh();
-        return this.send({ type: 'notice', level: 'success', text: `Perfil â€œ${profile.name}â€ adicionado. Use â€œLogin oficialâ€ para autenticar este perfil.` });
+        return this.send({ type: 'notice', level: 'success', text: `Perfil “${profile.name}” adicionado. Use “Login oficial” para autenticar este perfil.` });
       }
       if (message.type === 'connectCoordinatorProfile') {
         const text = await this.actions.connectCoordinatorProfile(String(message.profileId || ''));
@@ -241,7 +241,7 @@ class OrchestratorSettingsView {
       }
       if (message.type === 'renameCoordinatorProfile') {
         const current = (await this.actions.listCoordinatorProfiles()).find(item => item.id === String(message.profileId || ''));
-        if (!current) throw new Error('Perfil do coordenador nÃ£o encontrado.');
+        if (!current) throw new Error('Perfil do coordenador não encontrado.');
         const name = await vscode.window.showInputBox({ value: current.name, prompt: 'Renomear perfil do coordenador', validateInput: value => String(value || '').trim() ? undefined : 'Informe um nome.' });
         if (!name) return;
         await this.actions.updateCoordinatorProfile(current.id, { name });
@@ -249,11 +249,11 @@ class OrchestratorSettingsView {
         return;
       }
       if (message.type === 'removeCoordinatorProfile') {
-        const choice = await vscode.window.showWarningMessage('Remover este perfil do Orquestrador? Os dados de autenticaÃ§Ã£o da CLI serÃ£o preservados na pasta de armazenamento do perfil.', { modal: true }, 'Remover');
+        const choice = await vscode.window.showWarningMessage('Remover este perfil do Orquestrador? Os dados de autenticação da CLI serão preservados na pasta de armazenamento do perfil.', { modal: true }, 'Remover');
         if (choice !== 'Remover') return;
         await this.actions.removeCoordinatorProfile(String(message.profileId || ''));
         await this.refresh();
-        return this.send({ type: 'notice', level: 'info', text: 'Perfil removido da lista. Os dados locais de autenticaÃ§Ã£o foram preservados.' });
+        return this.send({ type: 'notice', level: 'info', text: 'Perfil removido da lista. Os dados locais de autenticação foram preservados.' });
       }
       if (message.type === 'initialize') {
         const outcome = await this.actions.initializeWorkspace();
@@ -266,7 +266,7 @@ class OrchestratorSettingsView {
       }
       if (message.type === 'installDependencies') {
         const choice = await vscode.window.showWarningMessage(
-          'Instalar ou iniciar o runtime privado do AI Memory? O adaptador de compatibilidade Lich Ã© opcional e nÃ£o serÃ¡ instalado.',
+          'Instalar ou iniciar o runtime privado do AI Memory? O adaptador de compatibilidade Lich é opcional e não será instalado.',
           { modal: true }, 'Instalar / iniciar'
         );
         if (choice !== 'Instalar / iniciar') return;
@@ -332,18 +332,18 @@ class OrchestratorSettingsView {
 </head>
 <body>
   <h2>Orquestrador</h2>
-  <p id="workspace" class="path">Abrindo projetoâ€¦</p>
+  <p id="workspace" class="path">Abrindo projeto…</p>
 
   <section class="section">
     <h3>Projeto</h3>
-    <p id="aiStatus">Verificando a pasta .aiâ€¦</p>
+    <p id="aiStatus">Verificando a pasta .ai…</p>
     <button id="initialize">Preparar projeto (.ai)</button>
-    <p class="hint">Cria specs, skills e a configuraÃ§Ã£o inicial somente quando .ai ainda nÃ£o existe.</p>
+    <p class="hint">Cria specs, skills e a configuração inicial somente quando .ai ainda não existe.</p>
   </section>
 
   <section class="section">
     <h3>Provedor do Orquestrador</h3>
-    <p class="hint">Use um modelo publicado pela API do VS Code ou um perfil local da CLI Claude/Codex. Os chats de outras extensÃµes continuam independentes; credenciais privadas deles nÃ£o sÃ£o copiadas.</p>
+    <p class="hint">Use um modelo publicado pela API do VS Code ou um perfil local da CLI Claude/Codex. Os chats de outras extensões continuam independentes; credenciais privadas deles não são copiadas.</p>
     <label for="orchestratorProvider">Agente / provedor</label>
     <select id="orchestratorProvider"></select>
     <p id="providerStatus" class="hint"></p>
@@ -352,45 +352,45 @@ class OrchestratorSettingsView {
       <label for="coordinatorProfileProvider">Provedor do perfil CLI</label>
       <select id="coordinatorProfileProvider"></select>
       <div><button id="addExistingCoordinatorProfile" class="secondary">Adicionar login CLI existente</button><button id="addIsolatedCoordinatorProfile" class="secondary">Adicionar perfil isolado</button></div>
-      <p class="hint">Login existente usa a configuraÃ§Ã£o atual da CLI. Perfis Claude isolados usam diretÃ³rios separados, confirmados pelo caminho reportado pela CLI. Perfis Codex usam CODEX_HOME e o armazenamento oficial file, separado por auth.json do perfil; esse arquivo Ã© mantido pela CLI, e nÃ£o criptografado pelo Orquestrador.</p>
+      <p class="hint">Login existente usa a configuração atual da CLI. Perfis Claude isolados usam diretórios separados, confirmados pelo caminho reportado pela CLI. Perfis Codex usam CODEX_HOME e o armazenamento oficial file, separado por auth.json do perfil; esse arquivo é mantido pela CLI, e não criptografado pelo Orquestrador.</p>
       <div id="coordinatorProfiles" class="agent-list"></div>
       <label for="coordinatorProfile">Perfil ativo do coordenador</label>
       <select id="coordinatorProfile"></select>
-      <label for="orchestratorEffort">EsforÃ§o do coordenador</label>
-      <select id="orchestratorEffort"><option value="">PadrÃ£o do agente</option><option value="low">Baixo</option><option value="medium">MÃ©dio</option><option value="high">Alto</option><option value="xhigh">Extra alto</option><option value="max">MÃ¡ximo</option></select>
-      <p id="workerCompatibilityStatus" class="hint">O perfil selecionado Ã© usado pelo coordenador. Perfis Codex autorizados tambÃ©m podem ser escolhidos por tarefa executada pelo Codex app-server; outros workers usam os mecanismos prÃ³prios do executor listado.</p>
+      <label for="orchestratorEffort">Esforço do coordenador</label>
+      <select id="orchestratorEffort"><option value="">Padrão do agente</option><option value="low">Baixo</option><option value="medium">Médio</option><option value="high">Alto</option><option value="xhigh">Extra alto</option><option value="max">Máximo</option></select>
+      <p id="workerCompatibilityStatus" class="hint">O perfil selecionado é usado pelo coordenador. Perfis Codex autorizados também podem ser escolhidos por tarefa executada pelo Codex app-server; outros workers usam os mecanismos próprios do executor listado.</p>
     </div>
-    <label for="orchestratorModel">Modelo padrÃ£o</label>
-    <input id="orchestratorModel" list="orchestratorModels" placeholder="Escolha um modelo disponÃ­vel ou informe o ID">
+    <label for="orchestratorModel">Modelo padrão</label>
+    <input id="orchestratorModel" list="orchestratorModels" placeholder="Escolha um modelo disponível ou informe o ID">
     <datalist id="orchestratorModels"></datalist>
     <p id="coordinatorModelStatus" class="hint"></p>
-    <p class="hint">Para um provedor VS Code, escolha um modelo publicado na lista. Para Claude/Codex CLI, informe o ID de modelo aceito pela CLI; o esforÃ§o aparece acima. A autenticaÃ§Ã£o CLI Ã© verificada antes de cada solicitaÃ§Ã£o.</p>
-    <label for="workerProvider">Agente trabalhador padrÃ£o</label>
+    <p class="hint">Para um provedor VS Code, escolha um modelo publicado na lista. Para Claude/Codex CLI, informe o ID de modelo aceito pela CLI; o esforço aparece acima. A autenticação CLI é verificada antes de cada solicitação.</p>
+    <label for="workerProvider">Agente trabalhador padrão</label>
     <select id="workerProvider"></select>
     <div>
-      <button id="checkWorkerAuth" class="secondary">Verificar autenticaÃ§Ã£o da CLI</button>
+      <button id="checkWorkerAuth" class="secondary">Verificar autenticação da CLI</button>
       <button id="connectWorker" class="secondary">Abrir fluxo oficial de login</button>
     </div>
-    <p id="workerAuthStatus" class="hint">A autenticaÃ§Ã£o da CLI ainda nÃ£o foi verificada.</p>
-    <label for="workerModel">Modelo padrÃ£o das tarefas do agente</label>
-    <input id="workerModel" placeholder="PadrÃ£o do agente">
-    <label for="workerEffort">EsforÃ§o padrÃ£o das tarefas do agente</label>
+    <p id="workerAuthStatus" class="hint">A autenticação da CLI ainda não foi verificada.</p>
+    <label for="workerModel">Modelo padrão das tarefas do agente</label>
+    <input id="workerModel" placeholder="Padrão do agente">
+    <label for="workerEffort">Esforço padrão das tarefas do agente</label>
     <select id="workerEffort">
-      <option value="">PadrÃ£o do agente</option><option value="minimal">MÃ­nimo</option>
-      <option value="low">Baixo</option><option value="medium">MÃ©dio</option>
-      <option value="high">Alto</option><option value="xhigh">Extra alto</option><option value="max">MÃ¡ximo</option>
+      <option value="">Padrão do agente</option><option value="minimal">Mínimo</option>
+      <option value="low">Baixo</option><option value="medium">Médio</option>
+      <option value="high">Alto</option><option value="xhigh">Extra alto</option><option value="max">Máximo</option>
     </select>
-    <p class="hint">Estes padrÃµes se aplicam Ã s tarefas do agente quando o plano nÃ£o definir modelo ou esforÃ§o prÃ³prios. A disponibilidade de cada opÃ§Ã£o depende do agente selecionado.</p>
+    <p class="hint">Estes padrões se aplicam às tarefas do agente quando o plano não definir modelo ou esforço próprios. A disponibilidade de cada opção depende do agente selecionado.</p>
     <label>Agentes trabalhadores permitidos pelo coordenador</label>
     <div id="allowedWorkers" class="agent-list"></div>
-    <p class="hint">Somente CLIs detectadas e compatÃ­veis com o executor legado aparecem aqui. As conversas nativas de outros provedores permanecem independentes.</p>
-    <label for="maxParallel">MÃ¡ximo de tarefas paralelas</label>
+    <p class="hint">Somente CLIs detectadas e compatíveis com o executor legado aparecem aqui. As conversas nativas de outros provedores permanecem independentes.</p>
+    <label for="maxParallel">Máximo de tarefas paralelas</label>
     <input id="maxParallel" type="number" min="1" max="8" value="2">
-    <label for="maxAttempts">MÃ¡ximo de tentativas por tarefa (inclui a primeira)</label>
+    <label for="maxAttempts">Máximo de tentativas por tarefa (inclui a primeira)</label>
     <input id="maxAttempts" type="number" min="1" max="5" value="3">
-    <label for="budgetLimitUsd">OrÃ§amento estimado mÃ¡ximo por plano (USD; 0 desativa)</label>
+    <label for="budgetLimitUsd">Orçamento estimado máximo por plano (USD; 0 desativa)</label>
     <input id="budgetLimitUsd" type="number" min="0" max="100000" step="0.01" value="0">
-    <p class="hint">Quando ativo, cada tarefa precisa de uma estimativa por tentativa. O Orquestrador bloqueia novas reservas se o total estimado atingir o limite. Isso nÃ£o Ã© cobranÃ§a real nem monitoramento de cota do provedor.</p>
+    <p class="hint">Quando ativo, cada tarefa precisa de uma estimativa por tentativa. O Orquestrador bloqueia novas reservas se o total estimado atingir o limite. Isso não é cobrança real nem monitoramento de cota do provedor.</p>
   </section>
 
   <section class="section">
@@ -400,14 +400,14 @@ class OrchestratorSettingsView {
     <input id="memoryWorkspace" placeholder="Detectado automaticamente ou default">
     <label for="memoryProject">Projeto</label>
     <input id="memoryProject" placeholder="Detectado automaticamente">
-    <p class="hint">Deixe vazio para usar o escopo de .ai-memory.toml ou o escopo padrÃ£o derivado do repositÃ³rio. A extensÃ£o envia workspace e project explicitamente para evitar que tarefas paralelas gravem na memÃ³ria ativa de outra sessÃ£o.</p>
+    <p class="hint">Deixe vazio para usar o escopo de .ai-memory.toml ou o escopo padrão derivado do repositório. A extensão envia workspace e project explicitamente para evitar que tarefas paralelas gravem na memória ativa de outra sessão.</p>
   </section>
 
   <section class="section">
-    <h3>Conhecimento durÃ¡vel do AI Memory</h3>
-    <p class="hint">Pesquise no escopo deste projeto ou crie uma nova pÃ¡gina. A gravaÃ§Ã£o usa a ferramenta oficial com create-only e confirma o conteÃºdo por leitura; uma pÃ¡gina existente nunca serÃ¡ substituÃ­da.</p>
+    <h3>Conhecimento durável do AI Memory</h3>
+    <p class="hint">Pesquise no escopo deste projeto ou crie uma nova página. A gravação usa a ferramenta oficial com create-only e confirma o conteúdo por leitura; uma página existente nunca será substituída.</p>
     <label for="memoryKnowledgeQuery">Pesquisar no AI Memory</label>
-    <input id="memoryKnowledgeQuery" placeholder="DecisÃµes, arquitetura, regras..."><button id="memoryKnowledgeSearch" class="secondary">Pesquisar</button>
+    <input id="memoryKnowledgeQuery" placeholder="Decisões, arquitetura, regras..."><button id="memoryKnowledgeSearch" class="secondary">Pesquisar</button>
     <div id="memoryKnowledgeLimitRow" data-limit hidden><label for="memoryKnowledgeLimit">Máximo de páginas retornadas</label><input id="memoryKnowledgeLimit" type="number" min="1" max="100" value="8"></div>
     <div id="memoryKnowledgeFilterRows" hidden>
       <div data-filter="tier"><label for="memoryKnowledgeFilterTier">Categoria</label><select id="memoryKnowledgeFilterTier"><option value="">Todas</option><option value="semantic">Semântica</option><option value="procedural">Procedural</option><option value="episodic">Episódica</option><option value="working">Em andamento</option></select></div>
@@ -419,11 +419,11 @@ class OrchestratorSettingsView {
       <div data-filter="explain"><label><input id="memoryKnowledgeFilterExplain" type="checkbox"> Exibir detalhes de ranking</label></div>
     </div>
     <pre id="memoryKnowledgeResults" class="status" aria-live="polite">Nenhuma pesquisa realizada.</pre>
-    <label for="memoryKnowledgePath">Criar pÃ¡gina em caminho relativo (.md)</label>
+    <label for="memoryKnowledgePath">Criar página em caminho relativo (.md)</label>
     <input id="memoryKnowledgePath" placeholder="orchestrator/knowledge/decisions.md">
-    <label for="memoryKnowledgeBody">ConteÃºdo Markdown</label>
-    <textarea id="memoryKnowledgeBody" placeholder="# DecisÃ£o&#10;&#10;Contexto, decisÃ£o e consequÃªncias..."></textarea>
-    <label for="memoryKnowledgeTags">Tags (separadas por vÃ­rgula)</label>
+    <label for="memoryKnowledgeBody">Conteúdo Markdown</label>
+    <textarea id="memoryKnowledgeBody" placeholder="# Decisão&#10;&#10;Contexto, decisão e consequências..."></textarea>
+    <label for="memoryKnowledgeTags">Tags (separadas por vírgula)</label>
     <input id="memoryKnowledgeTags" placeholder="architecture, decision">
     <label for="memoryKnowledgeTier">Nível de durabilidade</label>
     <select id="memoryKnowledgeTier">
@@ -437,7 +437,7 @@ class OrchestratorSettingsView {
     <input id="memoryKnowledgeKind" placeholder="decision, rule, architecture">
     <label for="memoryKnowledgeSources">Arquivos fonte rastreados e sem alterações (um caminho por linha)</label>
     <textarea id="memoryKnowledgeSources" placeholder="src/module.js&#10;docs/architecture.md"></textarea>
-    <button id="memoryKnowledgeCreate">Criar pÃ¡gina durÃ¡vel</button>
+    <button id="memoryKnowledgeCreate">Criar página durável</button>
     <p id="memoryKnowledgeStatus" class="hint" aria-live="polite"></p>
   </section>
 
@@ -480,9 +480,9 @@ class OrchestratorSettingsView {
     <h3>Build</h3>
     <label for="buildCommand">Comando</label>
     <input id="buildCommand" placeholder="npm">
-    <label for="buildArgs">Argumentos â€” um por linha</label>
+    <label for="buildArgs">Argumentos — um por linha</label>
     <textarea id="buildArgs" placeholder="run\nbuild"></textarea>
-    <label for="buildCwd">Pasta de execuÃ§Ã£o, relativa ao projeto</label>
+    <label for="buildCwd">Pasta de execução, relativa ao projeto</label>
     <input id="buildCwd" value=".">
     <label for="buildTimeout">Tempo limite (segundos)</label>
     <input id="buildTimeout" type="number" min="1" value="1800">
@@ -490,22 +490,22 @@ class OrchestratorSettingsView {
 
   <section class="section">
     <h3>Fontes upstream</h3>
-    <p class="hint">Essas fontes serÃ£o atualizadas por fast-forward antes do build. Ãrvores sujas ou divergentes interrompem o processo.</p>
+    <p class="hint">Essas fontes serão atualizadas por fast-forward antes do build. Árvores sujas ou divergentes interrompem o processo.</p>
     <div id="upstreams"></div>
     <button id="addUpstream" class="secondary">Adicionar upstream</button>
   </section>
 
   <section class="section">
     <h3>Ferramentas</h3>
-    <label for="lichCommand">ExecutÃ¡vel lich (opcional)</label>
+    <label for="lichCommand">Executável lich (opcional)</label>
     <input id="lichCommand" placeholder="lich">
-    <label for="aiMemoryCommand">ExecutÃ¡vel ai-memory (opcional)</label>
+    <label for="aiMemoryCommand">Executável ai-memory (opcional)</label>
     <input id="aiMemoryCommand" placeholder="ai-memory">
     <button id="checkTools" class="secondary">Verificar ferramentas</button>
     <button id="installDependencies" class="secondary">Instalar / iniciar AI Memory</button>
   </section>
 
-  <button id="save">Salvar configuraÃ§Ãµes</button>
+  <button id="save">Salvar configurações</button>
   <div id="notice" class="status" hidden></div>
 
   <script nonce="${nonce}">
@@ -552,11 +552,11 @@ class OrchestratorSettingsView {
       select.replaceChildren();
       for (const provider of state.options?.providers || []) {
         if (!provider.canCoordinateInOrchestratorChat && !provider.canCoordinateWithCli) continue;
-        select.append(new Option(provider.name + (provider.canCoordinateWithCli ? ' â€” CLI' : ' â€” VS Code'), provider.id));
+        select.append(new Option(provider.name + (provider.canCoordinateWithCli ? ' — CLI' : ' — VS Code'), provider.id));
       }
       select.value = config.providerId || '';
       if (!select.value && select.options.length) select.value = select.options[0].value;
-      if (!select.options.length) select.append(new Option('Nenhum coordenador compatÃ­vel detectado', ''));
+      if (!select.options.length) select.append(new Option('Nenhum coordenador compatível detectado', ''));
     }
     function populateAllowedWorkers(orchestration) {
       const root = byId('allowedWorkers');
@@ -564,14 +564,14 @@ class OrchestratorSettingsView {
       const candidates = (state.options?.providers || []).filter(provider => (provider.canRunInLich && provider.cliKind) || provider.canRunInVscodeModel || provider.canRunCodexAppServer || provider.canRunClaudeCode);
       const configured = Array.isArray(orchestration.allowedProviders) ? orchestration.allowedProviders : candidates.map(provider => provider.id);
       if (!candidates.length) {
-        const empty = document.createElement('p'); empty.className = 'hint'; empty.textContent = 'Nenhum agente com interface de execuÃ§Ã£o compatÃ­vel foi detectado.'; root.append(empty); return;
+        const empty = document.createElement('p'); empty.className = 'hint'; empty.textContent = 'Nenhum agente com interface de execução compatível foi detectado.'; root.append(empty); return;
       }
       for (const provider of candidates) {
         const label = document.createElement('label'); label.className = 'agent-option';
         const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.dataset.provider = provider.id; checkbox.checked = configured.includes(provider.id);
         const text = document.createElement('span'); text.innerHTML = '<span class="agent-name"></span><span class="agent-meta"></span>';
         text.querySelector('.agent-name').textContent = provider.name;
-        text.querySelector('.agent-meta').textContent = provider.source + (provider.canRunInVscodeModel ? ' Â· Pode executar tarefas pela API de modelos do VS Code' : provider.canRunCodexAppServer ? ' Â· SessÃµes prÃ³prias pelo Codex app-server' : provider.canRunClaudeCode ? ' Â· SessÃµes prÃ³prias Claude Code com aprovaÃ§Ãµes do Orchestrator' : ' Â· CLI de compatibilidade opcional');
+        text.querySelector('.agent-meta').textContent = provider.source + (provider.canRunInVscodeModel ? ' · Pode executar tarefas pela API de modelos do VS Code' : provider.canRunCodexAppServer ? ' · Sessões próprias pelo Codex app-server' : provider.canRunClaudeCode ? ' · Sessões próprias Claude Code com aprovações do Orchestrator' : ' · CLI de compatibilidade opcional');
         label.append(checkbox, text); root.append(label);
       }
     }
@@ -602,32 +602,32 @@ class OrchestratorSettingsView {
       const cli = Boolean(provider?.canCoordinateWithCli);
       const models = byId('orchestratorModels');
       models.replaceChildren();
-      for (const model of provider?.models || []) models.append(new Option(model.name + ' â€” ' + model.id, model.id));
+      for (const model of provider?.models || []) models.append(new Option(model.name + ' — ' + model.id, model.id));
       if (provider?.id === 'codex') {
         for (const model of state.coordinatorCliModels || []) {
-          if (!(provider.models || []).some(item => item.id === model.id)) models.append(new Option(model.name + ' â€” ' + model.id, model.id));
+          if (!(provider.models || []).some(item => item.id === model.id)) models.append(new Option(model.name + ' — ' + model.id, model.id));
         }
       }
       byId('orchestratorModel').value = modelValue || '';
-      byId('orchestratorModel').placeholder = cli ? 'ID do modelo aceito pela CLI' : provider?.models?.length ? 'Selecione um modelo publicado pelo VS Code' : 'Nenhum modelo compatÃ­vel disponÃ­vel';
+      byId('orchestratorModel').placeholder = cli ? 'ID do modelo aceito pela CLI' : provider?.models?.length ? 'Selecione um modelo publicado pelo VS Code' : 'Nenhum modelo compatível disponível';
       byId('cliProfileSettings').hidden = !cli;
       byId('orchestratorEffort').disabled = !cli;
       byId('connectProvider').hidden = cli;
       updateCoordinatorEffortOptions(modelValue || '');
       const catalogStatus = byId('coordinatorModelStatus');
-      if (provider?.id === 'codex') catalogStatus.textContent = state.coordinatorModelStatus || 'Selecione um perfil Codex autorizado para carregar o catÃ¡logo local de modelos.';
-      else if (cli) catalogStatus.textContent = 'Informe um ID aceito pela CLI; acesso ao modelo serÃ¡ confirmado na solicitaÃ§Ã£o.';
+      if (provider?.id === 'codex') catalogStatus.textContent = state.coordinatorModelStatus || 'Selecione um perfil Codex autorizado para carregar o catálogo local de modelos.';
+      else if (cli) catalogStatus.textContent = 'Informe um ID aceito pela CLI; acesso ao modelo será confirmado na solicitação.';
       else catalogStatus.textContent = '';
       const providerAccess = provider?.models.length
         ? provider.models.length + ' modelo(s) exposto(s) pelo VS Code.'
-        : 'Este provedor nÃ£o publica modelo para a conversa do Orquestrador.';
+        : 'Este provedor não publica modelo para a conversa do Orquestrador.';
       byId('providerStatus').textContent = provider
         ? cli
-          ? provider.name + ': coordenador via CLI oficial em modo de planejamento; usa apenas a autenticaÃ§Ã£o do perfil selecionado.'
-          : provider.name + ': ' + provider.source + '. ' + providerAccess + ' O acesso serÃ¡ verificado ao enviar a primeira solicitaÃ§Ã£o.'
+          ? provider.name + ': coordenador via CLI oficial em modo de planejamento; usa apenas a autenticação do perfil selecionado.'
+          : provider.name + ': ' + provider.source + '. ' + providerAccess + ' O acesso será verificado ao enviar a primeira solicitação.'
         : 'Escolha um provedor de modelos publicado no VS Code para conversar com o Coordenador.';
       if (!cli && state.options?.modelDiscoveryTimedOut) {
-        byId('providerStatus').textContent += ' A API de modelos do VS Code ainda nÃ£o respondeu; as outras configuraÃ§Ãµes jÃ¡ estÃ£o disponÃ­veis. Tente abrir ConfiguraÃ§Ãµes novamente depois de autorizar um provedor no Chat.';
+        byId('providerStatus').textContent += ' A API de modelos do VS Code ainda não respondeu; as outras configurações já estão disponíveis. Tente abrir Configurações novamente depois de autorizar um provedor no Chat.';
       }
       if (!cli && provider?.models?.length) {
         const accessCounts = { authorized: 0, 'consent-required': 0, blocked: 0, unknown: 0 };
@@ -650,8 +650,8 @@ class OrchestratorSettingsView {
       const efforts = provider?.id === 'codex'
         ? (model?.efforts?.length ? model.efforts : [...new Set((state.coordinatorCliModels || []).flatMap(item => item.efforts || []))])
         : ['low', 'medium', 'high', 'xhigh', 'max'];
-      const labels = { minimal: 'MÃ­nimo', low: 'Baixo', medium: 'MÃ©dio', high: 'Alto', xhigh: 'Extra alto', max: 'MÃ¡ximo', ultra: 'Ultra' };
-      select.replaceChildren(new Option('PadrÃ£o do agente', ''));
+      const labels = { minimal: 'Mínimo', low: 'Baixo', medium: 'Médio', high: 'Alto', xhigh: 'Extra alto', max: 'Máximo', ultra: 'Ultra' };
+      select.replaceChildren(new Option('Padrão do agente', ''));
       for (const effort of efforts) select.append(new Option(labels[effort] || effort, effort));
       select.value = efforts.includes(selected) ? selected : '';
     }
@@ -666,7 +666,7 @@ class OrchestratorSettingsView {
         return;
       }
       state.coordinatorModelRequestId = requestId;
-      state.coordinatorModelStatus = 'Carregando catÃ¡logo de modelos da CLI do Codexâ€¦';
+      state.coordinatorModelStatus = 'Carregando catálogo de modelos da CLI do Codex…';
       updateProviderDetails(byId('orchestratorModel').value);
       vscode.postMessage({ type: 'listCoordinatorModels', profileId, requestId });
     }
@@ -687,12 +687,12 @@ class OrchestratorSettingsView {
         const authorize = document.createElement('input'); authorize.type = 'checkbox'; authorize.checked = Boolean(profile.authorized); authorize.title = 'Autorizar como coordenador';
         authorize.addEventListener('change', () => vscode.postMessage({ type: 'authorizeCoordinatorProfile', profileId: profile.id, authorized: authorize.checked }));
         const text = document.createElement('span'); text.innerHTML = '<span class="agent-name"></span><span class="agent-meta"></span>';
-        text.querySelector('.agent-name').textContent = (provider?.name || profile.providerId) + ' Â· ' + profile.name;
+        text.querySelector('.agent-name').textContent = (provider?.name || profile.providerId) + ' · ' + profile.name;
         const auth = state.authStatuses?.['profile:' + profile.id];
-        text.querySelector('.agent-meta').textContent = (profile.isolated ? 'Perfil isolado' : 'Login CLI atual') + ' Â· ' + (auth?.text || 'autenticaÃ§Ã£o nÃ£o verificada');
-        const concurrency = document.createElement('label'); concurrency.className = 'profile-concurrency'; concurrency.textContent = 'SimultÃ¢neas (todos os projetos)';
+        text.querySelector('.agent-meta').textContent = (profile.isolated ? 'Perfil isolado' : 'Login CLI atual') + ' · ' + (auth?.text || 'autenticação não verificada');
+        const concurrency = document.createElement('label'); concurrency.className = 'profile-concurrency'; concurrency.textContent = 'Simultâneas (todos os projetos)';
         const limit = document.createElement('input'); limit.type = 'number'; limit.min = '1'; limit.max = '8'; limit.step = '1'; limit.value = Math.max(1, Math.min(8, Number(profile.maxParallel) || 1));
-        limit.setAttribute('aria-label', 'Limite de tarefas simultÃ¢neas para ' + profile.name);
+        limit.setAttribute('aria-label', 'Limite de tarefas simultâneas para ' + profile.name);
         limit.addEventListener('change', () => vscode.postMessage({ type: 'setCoordinatorProfileConcurrency', profileId: profile.id, maxParallel: Number(limit.value) }));
         concurrency.append(limit);
         const actions = document.createElement('span');
@@ -701,7 +701,7 @@ class OrchestratorSettingsView {
           button.addEventListener('click', () => vscode.postMessage({ type, profileId: profile.id })); actions.append(button);
         }
         row.append(authorize, text, concurrency, actions); list.append(row);
-        if (profile.providerId === selectedProviderId && profile.authorized) active.append(new Option(profile.name + (auth?.status === 'verified' ? ' Â· autenticado' : ' Â· nÃ£o verificado'), profile.id));
+        if (profile.providerId === selectedProviderId && profile.authorized) active.append(new Option(profile.name + (auth?.status === 'verified' ? ' · autenticado' : ' · não verificado'), profile.id));
       }
       active.value = config.profileId || '';
       byId('orchestratorEffort').value = config.effort || '';
@@ -742,9 +742,9 @@ class OrchestratorSettingsView {
       state = stateValue;
       byId('workspace').textContent = state.hasWorkspace ? state.workspace : 'Abra uma pasta de projeto para configurar o Orquestrador.';
       byId('aiStatus').textContent = state.aiExists
-        ? state.aiIsDirectory ? '.ai jÃ¡ existe. A preparaÃ§Ã£o nÃ£o alterarÃ¡ esta pasta.' : 'Existe um item chamado .ai que nÃ£o Ã© pasta. Nada serÃ¡ alterado.'
-        : 'A pasta .ai ainda nÃ£o existe.';
-      if (state.config?.configError) showNotice({ level: 'error', text: 'Erro de leitura da configuraÃ§Ã£o .ai: ' + state.config.configError });
+        ? state.aiIsDirectory ? '.ai já existe. A preparação não alterará esta pasta.' : 'Existe um item chamado .ai que não é pasta. Nada será alterado.'
+        : 'A pasta .ai ainda não existe.';
+      if (state.config?.configError) showNotice({ level: 'error', text: 'Erro de leitura da configuração .ai: ' + state.config.configError });
       byId('initialize').disabled = !state.hasWorkspace || state.aiExists;
       byId('save').disabled = !state.hasWorkspace || !state.aiIsDirectory;
       byId('memoryKnowledgeSearch').disabled = !state.hasWorkspace || !state.workspaceTrusted;
@@ -757,7 +757,7 @@ class OrchestratorSettingsView {
       updateKnowledgeOperation();
       const config = state.config || {};
       const orchestration = config.orchestration || {};
-      byId('workerCompatibilityStatus').textContent = 'O perfil selecionado Ã© usado pelo coordenador. Perfis Codex autorizados tambÃ©m podem ser escolhidos por tarefa executada pelo Codex app-server. Os demais workers usam a autenticaÃ§Ã£o e as opÃ§Ãµes prÃ³prias do executor listado; a extensÃ£o nÃ£o compartilha tokens entre provedores.';
+      byId('workerCompatibilityStatus').textContent = 'O perfil selecionado é usado pelo coordenador. Perfis Codex autorizados também podem ser escolhidos por tarefa executada pelo Codex app-server. Os demais workers usam a autenticação e as opções próprias do executor listado; a extensão não compartilha tokens entre provedores.';
       const workerDefaults = config.workerDefaults || {};
       populateProviderOptions(orchestration);
       populateCoordinatorProfiles(orchestration);
@@ -778,8 +778,8 @@ class OrchestratorSettingsView {
       byId('memoryWorkspace').value = memory.workspace || '';
       byId('memoryProject').value = memory.project || '';
       byId('memoryScopeStatus').textContent = state.memoryScope
-        ? 'Escopo detectado: '+state.memoryScope.workspace+'/'+state.memoryScope.project+' ('+state.memoryScope.source+'). Os campos preenchidos substituem essa detecÃ§Ã£o.'
-        : 'O escopo serÃ¡ validado ao consultar AI Memory.';
+        ? 'Escopo detectado: '+state.memoryScope.workspace+'/'+state.memoryScope.project+' ('+state.memoryScope.source+'). Os campos preenchidos substituem essa detecção.'
+        : 'O escopo será validado ao consultar AI Memory.';
       byId('upstreams').replaceChildren();
       for (const item of config.upstreams || []) addUpstream(item);
     }
@@ -800,7 +800,7 @@ class OrchestratorSettingsView {
       const query = byId('memoryKnowledgeQuery').value.trim();
       if (!query) { byId('memoryKnowledgeResults').textContent = 'Digite um termo para pesquisar.'; return; }
       const requestId = String(++knowledgeRequest);
-      byId('memoryKnowledgeResults').textContent = 'Pesquisando no escopo do projetoâ€¦';
+      byId('memoryKnowledgeResults').textContent = 'Pesquisando no escopo do projeto…';
       const filters = {};
       const fields = { tier: ['memoryKnowledgeFilterTier', 'value'], kind: ['memoryKnowledgeFilterKind', 'value'], path_prefix: ['memoryKnowledgeFilterPath', 'value'], tag: ['memoryKnowledgeFilterTag', 'value'], pin_first: ['memoryKnowledgeFilterPinned', 'checked'], include_superseded: ['memoryKnowledgeFilterSuperseded', 'checked'], explain: ['memoryKnowledgeFilterExplain', 'checked'] };
       for (const [name, [id, property]] of Object.entries(fields)) if (knowledgeSearchFilters.includes(name)) filters[name] = byId(id)[property];
@@ -877,19 +877,19 @@ class OrchestratorSettingsView {
       if (event.data.type === 'state') {
         try { load(event.data.state); }
         catch (error) {
-          byId('workspace').textContent = 'NÃ£o foi possÃ­vel exibir o estado do projeto.';
+          byId('workspace').textContent = 'Não foi possível exibir o estado do projeto.';
           byId('aiStatus').textContent = error.message || String(error);
           byId('initialize').disabled = true;
           byId('save').disabled = true;
-          showNotice({ level: 'error', text: 'Erro ao exibir as configuraÃ§Ãµes: ' + (error.message || String(error)) });
+          showNotice({ level: 'error', text: 'Erro ao exibir as configurações: ' + (error.message || String(error)) });
         }
       }
       if (event.data.type === 'stateError') {
         byId('workspace').textContent = event.data.workspace || 'Nenhuma pasta de projeto aberta.';
-        byId('aiStatus').textContent = 'NÃ£o foi possÃ­vel carregar o estado da pasta .ai.';
+        byId('aiStatus').textContent = 'Não foi possível carregar o estado da pasta .ai.';
         byId('initialize').disabled = true;
         byId('save').disabled = true;
-        showNotice({ level: 'error', text: 'Falha ao carregar as configuraÃ§Ãµes: ' + event.data.text });
+        showNotice({ level: 'error', text: 'Falha ao carregar as configurações: ' + event.data.text });
       }
       if (event.data.type === 'providers') {
         const providerId = byId('orchestratorProvider').value;
@@ -907,7 +907,7 @@ class OrchestratorSettingsView {
         state.coordinatorModelStatus = event.data.message || '';
         updateProviderDetails(byId('orchestratorModel').value);
       }
-      if (event.data.type === 'providerError') showNotice({ type: 'notice', level: 'error', text: 'NÃ£o foi possÃ­vel atualizar a lista de modelos: ' + event.data.text });
+      if (event.data.type === 'providerError') showNotice({ type: 'notice', level: 'error', text: 'Não foi possível atualizar a lista de modelos: ' + event.data.text });
       if (event.data.type === 'notice') showNotice(event.data);
       if (event.data.type === 'knowledgeSearchResult' && event.data.requestId === String(knowledgeRequest)) {
         const visibleFilters = (event.data.filters || []).filter(name => byId('memoryKnowledgeFilterRows').querySelector('[data-filter="' + name + '"]')?.hidden === false);
@@ -930,7 +930,7 @@ class OrchestratorSettingsView {
       }
       if (event.data.type === 'knowledgePageCreated') {
         byId('memoryKnowledgeStatus').textContent = 'AI Memory page created and verified: ' + event.data.path + ' (' + event.data.scope.workspace + '/' + event.data.scope.project + ', ID ' + event.data.pageId + ').';
-        showNotice({ level: 'success', text: 'PÃ¡gina do AI Memory criada e verificada.' });
+        showNotice({ level: 'success', text: 'Página do AI Memory criada e verificada.' });
       }
       if (event.data.type === 'knowledgePageLoaded' && event.data.requestId === String(knowledgePageLoadRequest)) renderKnowledgePage(event.data.pageToken, event.data.page, event.data.scope);
       if (event.data.type === 'knowledgePagePatched') {

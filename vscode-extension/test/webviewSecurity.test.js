@@ -66,6 +66,15 @@ test('both Orchestrator webview documents actually emit a CSP and nonce-bound sc
   }
 });
 
+test('generated Orchestrator UI keeps Portuguese accents readable', () => {
+  const webview = { cspSource: 'vscode-webview-resource:' };
+  const settings = OrchestratorSettingsView.prototype.html.call({}, webview);
+  const home = OrchestratorHomeView.prototype.html.call({}, webview);
+  assert.match(settings, /Conhecimento durável do AI Memory/);
+  assert.match(settings, /A autenticação CLI é verificada/);
+  assert.doesNotMatch(settings + home, /Ã[\s\S]|Â[\s\S]|â€/);
+});
+
 test('generated settings webview JavaScript parses before it is sent to VS Code', () => {
   const html = OrchestratorSettingsView.prototype.html.call({}, { cspSource: 'vscode-webview-resource:' });
   const script = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html)?.[1];

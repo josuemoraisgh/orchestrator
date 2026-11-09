@@ -83,7 +83,7 @@ class SharedTaskSlots {
     try {
       let ledger;
       try { ledger = JSON.parse(await fs.readFile(file, 'utf8')); }
-      catch (error) { throw new Error(`O limite compartilhado do perfil estÃ¡ invÃ¡lido (${error.message || error}); o agendamento foi interrompido.`); }
+      catch (error) { throw new Error(`O limite compartilhado do perfil está inválido (${error.message || error}); o agendamento foi interrompido.`); }
       if (!ledger || ledger.version !== 1 || !Array.isArray(ledger.leases)) throw new Error('O limite compartilhado do perfil tem um formato desconhecido; o agendamento foi interrompido.');
       ledger.profileId = String(profileId);
       ledger.leases = ledger.leases.filter(lease => {

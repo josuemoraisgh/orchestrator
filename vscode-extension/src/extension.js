@@ -193,7 +193,7 @@ async function updateCoordinatorProfile(context, profileId, changes) {
   if (typeof changes.authorized === 'boolean') profiles[index] = { ...profiles[index], authorized: changes.authorized };
   if (changes.maxParallel !== undefined) {
     const maxParallel = Number(changes.maxParallel);
-    if (!Number.isInteger(maxParallel) || maxParallel < 1 || maxParallel > 8) throw new Error('O limite por perfil precisa ser um nÃºmero inteiro entre 1 e 8.');
+    if (!Number.isInteger(maxParallel) || maxParallel < 1 || maxParallel > 8) throw new Error('O limite por perfil precisa ser um número inteiro entre 1 e 8.');
     profiles[index] = { ...profiles[index], maxParallel };
   }
   if (typeof changes.name === 'string' && changes.name.trim()) {
@@ -662,7 +662,7 @@ async function startCodexAppServerTask(context, sessions, input, taskJournal, wo
     ? { path: root, branch: 'current' }
     : await worktrees.open(root, { runId: input.runId, taskId: task.id, attempt: task.attempts, branch: task.worktree || undefined, baseBranch: task.base || undefined, seedIncludedFiles: task.worktreeNeedsSeed === true, existingPath: task.worktreePath || undefined });
   const continuity = await taskJournal.readContext(root, input.runId, task.id).catch(error => ({ verified: false, error: error.message || String(error), text: '' }));
-  if (!continuity.verified) throw new Error(`O contexto da tarefa não pôde ser lido do diÃ¡rio local: ${continuity.error || 'registro não confirmado'}`);
+  if (!continuity.verified) throw new Error(`O contexto da tarefa não pôde ser lido do diário local: ${continuity.error || 'registro não confirmado'}`);
   const detectedMemoryScope = await projectAiMemoryScope(root, config);
   const memoryScope = { ...detectedMemoryScope, projectId: task.memory?.projectId || detectedMemoryScope.projectId };
   const memoryContext = await readTaskMemoryContext(context, root, task, memoryScope, '', memoryRuntime);
