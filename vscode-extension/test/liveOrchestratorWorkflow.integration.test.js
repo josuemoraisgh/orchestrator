@@ -1,9 +1,9 @@
 'use strict';
 
 // Opt-in provider integration. A real Claude coordinator creates a plan via
-// the production chat handler; the production approval and scheduler methods
-// then dispatch into a bounded fake worker adapter. No agent process or VS
-// Code window is launched by this test.
+// the production chat handler; approval and scheduler then dispatch a real,
+// tightly constrained Claude worker in a temporary project. No VS Code window
+// is launched, and permission requests for filesystem or shell tools are denied.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
@@ -11,11 +11,13 @@ const path = require('node:path');
 const Module = require('node:module');
 const test = require('node:test');
 const { checkProfileAuthentication, runCoordinator } = require('../src/coordinatorCli');
+const { ClaudeCodeSessions } = require('../src/claudeCodeSessions');
 
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
   if (request === 'vscode') return {
     workspace: { isTrusted: true },
+    window: { showWarningMessage: async () => 'Concluir tarefa' },
     lm: { tools: [], selectChatModels: async () => [] },
     CancellationTokenSource: class { constructor() { this.token = {}; } dispose() {} }
   };
@@ -31,7 +33,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 test('live coordinator plan stays pending until approval, then reaches the scheduler', {
   skip: !enabled,
-  timeout: 180000
+  timeout: 300000
 }, async t => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'orchestrator-live-workflow-'));
   const project = path.join(temp, 'project');
@@ -66,6 +68,7 @@ test('live coordinator plan stays pending until approval, then reaches the sched
   const startedTasks = [];
   const journalEvents = [];
   const messages = [];
+  const workerSessions = new ClaudeCodeSessions();
   const context = { workspaceState };
   const view = Object.create(OrchestratorHomeView.prototype);
   Object.assign(view, {
@@ -104,17 +107,37 @@ test('live coordinator plan stays pending until approval, then reaches the sched
       recordTaskJournal: async (_root, _run, task, event) => { journalEvents.push({ taskId: task.id, event }); },
       start: async input => {
         startedTasks.push(input.task);
+        const opened = await workerSessions.start({
+          executable: provider.executablePath,
+          root: project,
+          title: input.task.title,
+          prefixArgs: ['--max-turns', '2'],
+          nodeExecutable: process.execPath,
+          requestApproval: async () => false,
+          prompt: [
+            `Task: ${input.task.title}`,
+            input.task.description,
+            `Acceptance criteria: ${(input.task.acceptanceCriteria || []).join('; ')}`,
+            'Reply exactly with LIVE_WORKFLOW_ACCEPTED. Do not use tools and do not change files.'
+          ].join('\n')
+        });
         return {
-          status: 'running', sessionId: 'bounded-test-worker-session', sessionName: 'Mock worker',
+          status: 'running', sessionId: opened.id, ticket: opened.id,
+          sessionName: opened.sessionName,
           provider: input.task.provider, profileId: input.task.profileId,
           executor: input.task.executor, projectPath: input.root
         };
       },
-      stop: async () => ({ stopped: true })
+      poll: task => workerSessions.poll(task.sessionId),
+      inspectChanges: async () => ({ verified: true, clean: true, files: [], totalFiles: 0 }),
+      stop: input => workerSessions.stop(input.session),
+      listTaskHandoffs: async () => []
     }
   });
 
   t.after(async () => {
+    await Promise.all([...workerSessions.sessions.keys()].map(id => workerSessions.stop(id).catch(() => {})));
+    workerSessions.dispose();
     await fs.rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
@@ -129,9 +152,30 @@ test('live coordinator plan stays pending until approval, then reaches the sched
   runs = workspaceState.get(taskRunsKey, []);
   assert.equal(startedTasks.length, 1, 'approval must pass the validated plan into the task scheduler');
   assert.equal(runs[0].tasks[0].status, 'running');
-  assert.equal(runs[0].tasks[0].sessionId, 'bounded-test-worker-session');
+  assert.ok(runs[0].tasks[0].sessionId);
   assert.equal(runs[0].tasks[0].executor, 'claude-code-cli');
   assert.ok(journalEvents.some(event => event.event === 'plan-approved'));
   assert.ok(journalEvents.some(event => event.event === 'session-started'));
   assert.ok(messages.some(message => message.type === 'busy' && message.value === false));
+
+  const workerId = runs[0].tasks[0].sessionId;
+  const deadline = Date.now() + 120000;
+  let workerResult;
+  while (Date.now() < deadline) {
+    const outcome = workerSessions.poll(workerId);
+    if (outcome.status === 'answered') { workerResult = outcome; break; }
+    if (outcome.status === 'failed') throw new Error(`Worker failed: ${outcome.error}`);
+    await delay(250);
+  }
+  assert.ok(workerResult, 'real Claude worker must finish within the bounded test window');
+  assert.match(workerResult.result, /LIVE_WORKFLOW_ACCEPTED/);
+
+  await view.pollTasks(true);
+  runs = workspaceState.get(taskRunsKey, []);
+  assert.equal(runs[0].tasks[0].status, 'awaitingReview');
+  assert.match(runs[0].tasks[0].result, /LIVE_WORKFLOW_ACCEPTED/);
+  await view.reviewTask(runs[0].id, runs[0].tasks[0].id, true);
+  runs = workspaceState.get(taskRunsKey, []);
+  assert.equal(runs[0].tasks[0].status, 'complete');
+  assert.equal(runs[0].status, 'complete');
 });
