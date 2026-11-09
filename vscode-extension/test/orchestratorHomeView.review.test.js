@@ -156,6 +156,58 @@ test('failed task cancellation remains running and keeps its resource reservatio
   assert.equal(released, false);
 });
 
+test('retry after owner-host recovery preserves provider thread and does not stop a dead session', async () => {
+  const task = {
+    id: 'task-1', title: 'Continue work', status: 'failed', attempts: 1,
+    executor: 'codex-app-server', provider: 'codex', sessionState: 'owner-host-ended',
+    sessionId: 'old-session', threadId: 'thread-1', threadProvider: 'codex',
+    threadProfileId: 'profile-1', workerPid: 0, dependsOn: [], history: [],
+    result: '', error: 'Host closed before saving the result.'
+  };
+  const run = { id: 'run-1', status: 'failed', tasks: [task] };
+  let runs = [run];
+  let released = false;
+  let scheduled = false;
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => runs || fallback, update: async (_key, value) => { runs = value; } } };
+  view.getState = async () => ({ workspace: 'C:/project', config: { orchestration: { maxAttempts: 3 } } });
+  view.taskActions = { stop: async () => { throw new Error('must not stop a session owned by another host'); } };
+  view.sharedTaskSlots = { release: async () => { released = true; } };
+  view.recordTaskJournal = async () => true;
+  view.recordTaskMemory = async () => ({ verified: true });
+  view.scheduleRun = async () => { scheduled = true; };
+
+  await view.retryTask('run-1', 'task-1', 'Resume from the saved thread.');
+
+  assert.equal(released, true);
+  assert.equal(scheduled, true);
+  assert.equal(task.status, 'ready');
+  assert.equal(task.sessionId, '');
+  assert.equal(task.threadId, 'thread-1');
+  assert.equal(task.threadProvider, 'codex');
+  assert.equal(task.threadProfileId, 'profile-1');
+  assert.equal(task.workerPid, 0);
+  assert.equal(task.history.at(-1).event, 'retry');
+});
+
+test('retry refuses to resume while an orphan provider process is alive', async () => {
+  const task = {
+    id: 'task-1', title: 'Continue work', status: 'failed', attempts: 1,
+    executor: 'codex-app-server', provider: 'codex', sessionState: 'orphaned-process',
+    sessionId: 'session-1', workerPid: process.pid, dependsOn: [], history: []
+  };
+  const run = { id: 'run-1', status: 'failed', tasks: [task] };
+  const view = Object.create(OrchestratorHomeView.prototype);
+  view.context = { workspaceState: { get: (_key, fallback) => [run], update: async () => {} } };
+  view.getState = async () => ({ workspace: 'C:/project', config: { orchestration: { maxAttempts: 3 } } });
+  let stopped = false;
+  view.taskActions = { stop: async () => { stopped = true; return { stopped: true }; } };
+
+  await assert.rejects(view.retryTask('run-1', 'task-1', 'Continue.'), /processo do agente/);
+  assert.equal(stopped, false);
+  assert.equal(task.status, 'failed');
+});
+
 test('cancellation during startup marks only the chosen task for stop on dispatch return', async () => {
   const task = { id: 'task-a', status: 'starting', history: [] };
   let runs = [{ id: 'run-1', status: 'running', tasks: [task] }];

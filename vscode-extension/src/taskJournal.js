@@ -24,6 +24,12 @@ function projectKey(projectRoot) {
   return crypto.createHash('sha256').update(normalizedProjectPath(projectRoot)).digest('hex');
 }
 
+function isProcessAlive(pid) {
+  if (!Number.isInteger(pid) || pid < 1) return false;
+  try { process.kill(pid, 0); return true; }
+  catch (error) { return error.code === 'EPERM'; }
+}
+
 function boundedText(value, max = MAX_RESULT_CHARS) {
   return String(value || '').slice(0, max);
 }
@@ -58,6 +64,7 @@ function taskSnapshot(run, task, event) {
     deliveryStatus: boundedText(task.deliveryStatus, 40),
     base: boundedText(task.base, 200),
     ownerPid: process.pid,
+    workerPid: Number.isInteger(task.workerPid) ? task.workerPid : 0,
     sessionId: boundedText(task.sessionId || task.previousSessionId, 240),
     threadId: boundedText(task.threadId, 240),
     threadProvider: boundedText(task.threadProvider, 80),
@@ -372,13 +379,18 @@ class TaskJournal {
     return this.withProject(projectRoot, journal => Object.values(journal.tasks).flatMap(record => {
       const task = record?.latest;
       if (!task?.sessionId || task.status !== 'running' || !Number.isInteger(task.ownerPid)) return [];
-      let ownerAlive = false;
-      try { process.kill(task.ownerPid, 0); ownerAlive = true; }
-      catch (error) { ownerAlive = error.code === 'EPERM'; }
-      if (!ownerAlive) return [];
-      return [{ id: task.sessionId, projectPath: task.projectPath || projectRoot, path: task.worktreePath || task.projectPath || projectRoot, state: 'busy', detail: task.history?.at(-1)?.detail || '', label: task.title || task.sessionId }];
+      const ownerAlive = isProcessAlive(task.ownerPid);
+      const workerAlive = isProcessAlive(task.workerPid);
+      if (!ownerAlive && !workerAlive) return [];
+      return [{
+        id: task.sessionId, projectPath: task.projectPath || projectRoot,
+        path: task.worktreePath || task.projectPath || projectRoot,
+        state: ownerAlive ? 'busy' : 'unknown',
+        detail: ownerAlive ? (task.history?.at(-1)?.detail || '') : 'O host do Orchestrator encerrou, mas o processo do agente ainda está ativo; a tarefa não será retomada automaticamente.',
+        label: task.title || task.sessionId
+      }];
     }));
   }
 }
 
-module.exports = { TaskJournal };
+module.exports = { TaskJournal, isProcessAlive };

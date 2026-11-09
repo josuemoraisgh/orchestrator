@@ -13,6 +13,7 @@ const { createContinuityAnchor, buildContinuityContext, sanitizeThreadForStorage
 const { resolveCoordinatorCli } = require('./coordinatorReadiness');
 const { validateAddedDiffLocation } = require('./diffReview');
 const { modelAccessStatus, modelAccessLabel } = require('./modelAccess');
+const { isProcessAlive } = require('./taskJournal');
 
 const TASK_RUNS_KEY = 'orchestratorAi.taskRuns';
 const TERMINAL_SESSION_STATES = new Set(['answered', 'done', 'complete', 'completed', 'failed', 'stopped', 'parked', 'owner-host-ended', 'closed-after-completion-for-checkout-reuse']);
@@ -1127,6 +1128,21 @@ class OrchestratorHomeView {
     const workspace = state.workspace;
     const maxAttempts = Math.max(1, Math.min(5, Number(state.config?.orchestration?.maxAttempts) || 3));
     if (task.attempts >= maxAttempts) throw new Error(`O limite configurado de ${maxAttempts} tentativa(s) desta tarefa foi atingido.`);
+    if (task.sessionState === 'orphaned-process') {
+      if (isProcessAlive(task.workerPid)) throw new Error(`O processo do agente ${task.workerPid} ainda esta ativo. Feche ou inspecione esse processo antes de continuar a tarefa.`);
+      task.sessionState = 'owner-host-ended';
+      task.history = Array.isArray(task.history) ? task.history : [];
+      task.history.push({ at: Date.now(), event: 'orphan-process-exited', detail: `O processo trabalhador ${task.workerPid} nao esta mais ativo; a retomada usara o thread salvo.` });
+    } else if (task.sessionState === 'owner-host-ended-unverified') {
+      const choice = await vscode.window.showWarningMessage(
+        'Esta tarefa antiga nao salvou o PID do agente. Confira Claude/Codex e confirme que nao ha processo ativo antes de retomar a conversa salva.',
+        { modal: true }, 'Confirmei; continuar'
+      );
+      if (choice !== 'Confirmei; continuar') return;
+      task.sessionState = 'owner-host-ended';
+      task.history = Array.isArray(task.history) ? task.history : [];
+      task.history.push({ at: Date.now(), event: 'legacy-worker-absence-confirmed', detail: 'O usuario confirmou que nao ha processo do agente ativo; a retomada usara o thread salvo.' });
+    }
     const guidance = guidanceOverride === undefined
       ? await vscode.window.showInputBox({ title: `Repetir: ${task.title}`, prompt: 'Informe o que o agente deve tentar ou corrigir. O resultado anterior será incluído no handoff.', value: '', ignoreFocusOut: true })
       : String(guidanceOverride || '').trim().slice(0, 2000);
@@ -1165,7 +1181,7 @@ class OrchestratorHomeView {
     task.handoff = [task.result ? `Resultado anterior:\n${task.result}` : '', task.error ? `Falha anterior:\n${task.error}` : '', guidance ? `Instrução para a nova tentativa:\n${guidance}` : ''].filter(Boolean).join('\n\n').slice(0, 2000);
     const previousProvider = task.provider || 'unknown';
     const previousSessionId = task.sessionId || '';
-    task.sessionId = ''; task.sessionName = ''; task.ticket = '';
+    task.sessionId = ''; task.sessionName = ''; task.ticket = ''; task.workerPid = 0;
     task.handoffId = ''; task.handoffRecipient = ''; task.handoffReceipt = undefined;
     const complete = new Set(run.tasks.filter(item => item.status === 'complete').map(item => item.id));
     task.status = task.dependsOn.every(id => complete.has(id)) ? 'ready' : 'waitingDependency';

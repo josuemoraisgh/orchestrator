@@ -14,7 +14,7 @@ const { OrchestratorHomeView } = require('./orchestratorHomeView');
 const { selectChatModels } = require('./languageModels');
 const { modelAccessStatus } = require('./modelAccess');
 const { checkProfileAuthentication, coordinatorInvocation, listCodexModelCatalog, prepareProfileHome, profileEnvironment, resolveCodexModelSelection, runCoordinator } = require('./coordinatorCli');
-const { TaskJournal } = require('./taskJournal');
+const { TaskJournal, isProcessAlive } = require('./taskJournal');
 const { VscodeWorkerSessions } = require('./vscodeWorker');
 const { CodexAppServerSessions } = require('./codexAppServer');
 const { ClaudeCodeSessions } = require('./claudeCodeSessions');
@@ -627,6 +627,9 @@ async function pollVscodeModelTask(modelSessions, taskJournal, task) {
   if (!latest || latest.sessionId !== task.sessionId) return { status: 'failed', error: 'O diário local não confirma a sessão ativa.' };
   if (['awaitingReview', 'complete'].includes(latest.status)) return { status: 'answered', result: latest.result || '', sessionState: 'done', model: latest.model, modelName: latest.modelName };
   if (['failed', 'blocked', 'cancelled'].includes(latest.status)) return { status: 'failed', stopped: latest.status === 'cancelled', error: latest.error || 'A sessão terminou em outro host.' };
+  if (latest.status === 'running' && !isProcessAlive(latest.ownerPid)) {
+    return { status: 'failed', sessionState: 'owner-host-ended', error: 'The VS Code model worker belonged to a closed Orchestrator host. The next attempt will use the saved task journal.' };
+  }
   if (latest.status === 'running' && Number.isInteger(latest.ownerPid)) {
     try { process.kill(latest.ownerPid, 0); return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
     catch (error) { if (error.code === 'EPERM') return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
@@ -782,6 +785,16 @@ async function pollCodexAppServerTask(sessions, taskJournal, task) {
   if (!latest || latest.sessionId !== task.sessionId) return { status: 'failed', error: 'O diário local não confirma a sessão Codex ativa.' };
   if (['awaitingReview', 'complete'].includes(latest.status)) return { status: 'answered', result: latest.result || '', sessionState: 'done', threadId: latest.threadId || task.threadId };
   if (['failed', 'blocked', 'cancelled'].includes(latest.status)) return { status: 'failed', stopped: latest.status === 'cancelled', error: latest.error || 'A sessão Codex terminou em outro host.' };
+  if (latest.status === 'running' && !isProcessAlive(latest.ownerPid)) {
+    const workerAlive = isProcessAlive(latest.workerPid);
+    const sessionState = workerAlive ? 'orphaned-process' : latest.workerPid ? 'owner-host-ended' : 'owner-host-ended-unverified';
+    const error = workerAlive
+      ? `The Orchestrator host closed, but Codex process ${latest.workerPid} is still active. Inspect or stop it before continuing the task.`
+      : latest.workerPid
+        ? 'The Orchestrator host and Codex process exited without saving a result. The next attempt can resume the saved thread.'
+        : 'O host proprietário da sessão Codex encerrou, mas o registro não confirma se o trabalhador ainda está ativo. Verifique o agente antes de continuar.';
+    return { status: 'failed', sessionState, error };
+  }
   if (latest.status === 'running' && Number.isInteger(latest.ownerPid) && latest.ownerPid > 0) {
     try { process.kill(latest.ownerPid, 0); return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
     catch (error) { if (error.code === 'EPERM') return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
@@ -896,6 +909,16 @@ async function pollClaudeCodeTask(sessions, taskJournal, task) {
   if (!latest || latest.sessionId !== task.sessionId) return { status: 'failed', error: 'O diário local não confirma a sessão Claude ativa.' };
   if (['awaitingReview', 'complete'].includes(latest.status)) return { status: 'answered', result: latest.result || '', sessionState: 'done', threadId: latest.threadId || task.threadId };
   if (['failed', 'blocked', 'cancelled'].includes(latest.status)) return { status: 'failed', stopped: latest.status === 'cancelled', error: latest.error || 'A sessão Claude terminou em outro host.' };
+  if (latest.status === 'running' && !isProcessAlive(latest.ownerPid)) {
+    const workerAlive = isProcessAlive(latest.workerPid);
+    const sessionState = workerAlive ? 'orphaned-process' : latest.workerPid ? 'owner-host-ended' : 'owner-host-ended-unverified';
+    const error = workerAlive
+      ? `The Orchestrator host closed, but Claude process ${latest.workerPid} is still active. Inspect or stop it before continuing the task.`
+      : latest.workerPid
+        ? 'The Orchestrator host and Claude process exited without saving a result. The next attempt can resume the saved session.'
+        : 'This older task record has no worker PID. Verify that no Claude agent is still active before continuing.';
+    return { status: 'failed', sessionState, error };
+  }
   if (latest.status === 'running' && Number.isInteger(latest.ownerPid)) {
     try { process.kill(latest.ownerPid, 0); return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
     catch (error) { if (error.code === 'EPERM') return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }

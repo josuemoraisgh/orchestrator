@@ -59,6 +59,29 @@ test('Codex polling fails clearly after the recorded owner exits without a resul
   assert.match(result.error, /host proprietário.*encerrou/i);
 });
 
+test('Codex polling keeps an orphan worker reserved after its owner host exits', async () => {
+  const { sessions, journal, task } = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: 2147483647, workerPid: process.pid });
+  const result = await pollCodexAppServerTask(sessions, journal, task);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.sessionState, 'orphaned-process');
+  assert.match(result.error, /Codex process .*still active/i);
+});
+
+test('Codex polling marks an exited owner and worker as resumable from the saved thread', async () => {
+  const { sessions, journal, task } = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: 2147483647, workerPid: 2147483646, threadId: 'thread-1' });
+  const result = await pollCodexAppServerTask(sessions, journal, task);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.sessionState, 'owner-host-ended');
+  assert.match(result.error, /resume the saved thread/i);
+});
+
+test('Codex polling records old owner sessions as uncertain when the worker PID was not persisted', async () => {
+  const { sessions, journal, task } = foreignSessionHarness({ status: 'running', sessionId: 'session-1', ownerPid: 2147483647 });
+  const result = await pollCodexAppServerTask(sessions, journal, task);
+  assert.equal(result.sessionState, 'owner-host-ended-unverified');
+  assert.ok(result.error.includes('encerrou'));
+});
+
 test('separate Codex poller observes running and completed owner updates through the real task journal', async t => {
   const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'orchestrator-cross-window-codex-'));
   const project = path.join(storage, 'project');
@@ -69,7 +92,7 @@ test('separate Codex poller observes running and completed owner updates through
   const task = {
     runId: run.id, id: 'task-1', title: 'Implement feature', description: 'Bounded task', acceptanceCriteria: ['Works'],
     status: 'running', provider: 'codex', profileId: 'profile-1', model: 'gpt-test', effort: 'medium',
-    executor: 'codex-app-server', attempts: 1, sessionId: 'session-1', threadId: 'thread-1',
+    executor: 'codex-app-server', attempts: 1, sessionId: 'session-1', threadId: 'thread-1', workerPid: process.pid,
     projectPath: project, worktreePath: project, history: []
   };
   await journal.record(project, run, task, 'session-started');
