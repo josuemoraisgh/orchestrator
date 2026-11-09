@@ -21,11 +21,13 @@ test('first-party model worker runs bounded tools, blocks path escape, and recor
   const outside = path.join(path.dirname(root), 'outside-orchestrator-worker.txt');
   await fs.rm(outside, { force: true });
   const events = [];
+  let firstRequestMessages;
   let requestNumber = 0;
   const model = {
     vendor: 'copilot', id: 'model-x', name: 'Model X', capabilities: { toolCalling: 5 },
-    async sendRequest() {
+    async sendRequest(messages) {
       requestNumber++;
+      if (requestNumber === 1) firstRequestMessages = messages;
       return { stream: stream(requestNumber === 1 ? [
         new ToolCallPart('write_file', { path: '../outside-orchestrator-worker.txt', content: 'must not escape' }, 'call-1'),
         new ToolCallPart('write_file', { path: 'generated.txt', content: 'safe content' }, 'call-2')
@@ -46,10 +48,11 @@ test('first-party model worker runs bounded tools, blocks path escape, and recor
   const result = await runModelTask(vscode, {
     provider: 'copilot', model: 'model-x', root, runId: 'run-1', taskId: 'task-1', attempt: 1,
     title: 'Create a file', description: 'Create generated.txt', acceptanceCriteria: ['File exists'],
-    continuityContext: 'Prior task context'
+    continuityContext: 'Prior task context', projectGuidance: 'Project guidance: follow .ai/specs/PRODUCT.md'
   }, { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) }, () => {}, event => events.push(event));
 
   assert.match(result.result, /approved file/);
+  assert.ok(firstRequestMessages.some(message => String(message.content || '').includes('Project guidance: follow .ai/specs/PRODUCT.md')));
   assert.equal(await fs.readFile(path.join(root, 'generated.txt'), 'utf8'), 'safe content');
   await assert.rejects(fs.stat(outside), { code: 'ENOENT' });
   assert.equal(events.filter(event => event.type === 'tool-call').length, 2);
