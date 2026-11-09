@@ -1298,3 +1298,18 @@ slot; a negative result leaves the task visible as cancelling and reserved.
 Full suite: 128 passed, 0 failed, 6 optional integrations skipped. This does
 not claim live-provider cancellation under load or native VS Code runtime
 validation.
+
+Current packaged UI and cleanup check (2026-11-09): built and installed
+Orchestrator-AI 0.1.76 from the current source in a separate VS Code 1.145.2
+window using a dedicated user-data directory. The VSIX SHA-256 is
+`76C60B9E24E0D96269EE035399151E00BB17C29AD0510E2F634908F64C3D4DAC`; its
+release metadata pins Lich v0.87.0 and AI Memory v3.4.4 with published archive
+digests. The Extension Host log confirms `local.orchestrator-ai` activation;
+the managed runtime reports AI Memory v3.4.4 ready. Accessibility and visual
+inspection confirm the Orquestrador view opens automatically and renders its
+own conversation, new-conversation control, and settings control. The isolated
+profile had no authorized provider account, so no model request, settings
+workflow, worker dispatch, or authentication reuse is claimed from this UI
+check. The candidate window was closed gracefully and every process using the
+dedicated VS Code test installation exited; the regular VS Code windows were
+left open.
