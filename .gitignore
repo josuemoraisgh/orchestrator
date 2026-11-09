@@ -1,3 +1,4 @@
 /vscode-extension/*.vsix
+/vscode-extension/node_modules/
 /vscode-extension/node_modules/.cache/
 /.ai/orchestrator.json
