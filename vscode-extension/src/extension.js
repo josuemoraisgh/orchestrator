@@ -782,7 +782,11 @@ async function pollCodexAppServerTask(sessions, taskJournal, task) {
   if (!latest || latest.sessionId !== task.sessionId) return { status: 'failed', error: 'O diário local não confirma a sessão Codex ativa.' };
   if (['awaitingReview', 'complete'].includes(latest.status)) return { status: 'answered', result: latest.result || '', sessionState: 'done', threadId: latest.threadId || task.threadId };
   if (['failed', 'blocked', 'cancelled'].includes(latest.status)) return { status: 'failed', stopped: latest.status === 'cancelled', error: latest.error || 'A sessão Codex terminou em outro host.' };
-  return { status: 'failed', error: 'A sessão Codex está em outra janela e seu estado vivo ainda não é compartilhado entre hosts.' };
+  if (latest.status === 'running' && Number.isInteger(latest.ownerPid) && latest.ownerPid > 0) {
+    try { process.kill(latest.ownerPid, 0); return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
+    catch (error) { if (error.code === 'EPERM') return { status: 'pending', sessionState: 'busy', sessionDetail: 'Executando em outra janela do VS Code.' }; }
+  }
+  return { status: 'failed', error: 'O host proprietário da sessão Codex encerrou antes de registrar o resultado.' };
 }
 
 async function startClaudeCodeTask(context, sessions, input, taskJournal, worktrees, memoryRuntime) {
@@ -1882,4 +1886,4 @@ function activate(context) {
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, startClaudeCodeTask };
+module.exports = { activate, deactivate, startClaudeCodeTask, pollCodexAppServerTask };
