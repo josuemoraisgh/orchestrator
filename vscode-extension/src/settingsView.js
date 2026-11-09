@@ -14,6 +14,9 @@ class OrchestratorSettingsView {
     this.modelListener = vscode.lm.onDidChangeChatModels(() => {
       void this.refreshProviders();
     });
+    this.modelAccessListener = vscode.lm.accessInformation?.onDidChange?.(() => {
+      void this.refreshProviders();
+    });
     this.trustListener = vscode.workspace.onDidGrantWorkspaceTrust?.(() => { void this.refresh(); });
     this.workspaceListener = vscode.workspace.onDidChangeWorkspaceFolders?.(() => { void this.refresh(); });
   }
@@ -40,6 +43,7 @@ class OrchestratorSettingsView {
 
   dispose() {
     this.modelListener?.dispose();
+    this.modelAccessListener?.dispose();
     this.trustListener?.dispose();
     this.workspaceListener?.dispose();
     this.panel?.dispose();
@@ -604,6 +608,17 @@ class OrchestratorSettingsView {
         : 'Escolha um provedor de modelos publicado no VS Code para conversar com o Coordenador.';
       if (!cli && state.options?.modelDiscoveryTimedOut) {
         byId('providerStatus').textContent += ' A API de modelos do VS Code ainda nÃ£o respondeu; as outras configuraÃ§Ãµes jÃ¡ estÃ£o disponÃ­veis. Tente abrir ConfiguraÃ§Ãµes novamente depois de autorizar um provedor no Chat.';
+      }
+      if (!cli && provider?.models?.length) {
+        const accessCounts = { authorized: 0, 'consent-required': 0, blocked: 0, unknown: 0 };
+        for (const model of provider.models) accessCounts[model.accessStatus] = (accessCounts[model.accessStatus] || 0) + 1;
+        const accessSummary = [
+          accessCounts.authorized ? accessCounts.authorized + ' autorizado(s)' : '',
+          accessCounts['consent-required'] ? accessCounts['consent-required'] + ' aguardando consentimento' : '',
+          accessCounts.blocked ? accessCounts.blocked + ' sem autorização' : '',
+          accessCounts.unknown ? accessCounts.unknown + ' sem estado de acesso consultável' : ''
+        ].filter(Boolean).join(', ');
+        if (accessSummary) byId('providerStatus').textContent += ' Estado de acesso informado pelo VS Code: ' + accessSummary + '.';
       }
       byId('connectProvider').disabled = !provider;
     }

@@ -12,6 +12,7 @@ const yauzl = require('yauzl');
 const { OrchestratorSettingsView } = require('./settingsView');
 const { OrchestratorHomeView } = require('./orchestratorHomeView');
 const { selectChatModels } = require('./languageModels');
+const { modelAccessStatus } = require('./modelAccess');
 const { checkProfileAuthentication, coordinatorInvocation, listCodexModelCatalog, prepareProfileHome, profileEnvironment, resolveCodexModelSelection, runCoordinator } = require('./coordinatorCli');
 const { TaskJournal } = require('./taskJournal');
 const { VscodeWorkerSessions } = require('./vscodeWorker');
@@ -56,6 +57,7 @@ async function listOrchestrationOptions() {
         imageInput: model.capabilities?.imageInput === true
       },
       maxInputTokens: Number(model.maxInputTokens) || 0,
+      accessStatus: modelAccessStatus(vscode.lm.accessInformation, model),
       key: `${model.vendor}:${model.id}`
   }));
   const modelDiscoveryTimedOut = selectedModels.timedOut;

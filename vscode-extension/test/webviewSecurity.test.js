@@ -59,6 +59,8 @@ test('both Orchestrator webview documents actually emit a CSP and nonce-bound sc
       assert.match(html, /id="memoryKnowledgeSources"/);
       assert.match(html, /versão carregada|precondição de versão/i);
       assert.match(html, /create-only/);
+      assert.match(html, /Estado de acesso informado pelo VS Code/);
+      assert.match(html, /aguardando consentimento/);
     }
   }
 });
