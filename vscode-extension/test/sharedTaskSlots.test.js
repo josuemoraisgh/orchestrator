@@ -5,7 +5,13 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
-const { SharedTaskSlots } = require('../src/sharedTaskSlots');
+const { SharedTaskSlots, normalizedPath } = require('../src/sharedTaskSlots');
+
+test('project path identity follows filesystem case sensitivity', () => {
+  assert.equal(normalizedPath('C:\\Projects\\Orchestrator', 'win32'), 'c:/projects/orchestrator');
+  assert.equal(normalizedPath('/home/user/Projects/Orchestrator', 'linux'), '/home/user/Projects/Orchestrator');
+  assert.equal(normalizedPath('/home/user/Projects/Orchestrator', 'darwin'), '/home/user/Projects/Orchestrator');
+});
 
 test('task reservations enforce configured concurrency per authorized profile', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'orchestrator-profile-slots-'));

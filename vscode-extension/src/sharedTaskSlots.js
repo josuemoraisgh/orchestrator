@@ -20,8 +20,10 @@ function sharedUserStoragePath(fallbackPath) {
   return fallbackPath;
 }
 
-function normalizedPath(value) {
-  return path.resolve(String(value || '')).replace(/\\/g, '/').toLowerCase();
+function normalizedPath(value, platform = process.platform) {
+  const pathApi = platform === 'win32' ? path.win32 : path.posix;
+  const resolved = pathApi.resolve(String(value || '')).replace(/\\/g, '/');
+  return platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
 function sessionIdOf(session) {
@@ -368,4 +370,4 @@ class SharedTaskSlots {
   }
 }
 
-module.exports = { SharedTaskSlots, externalSessionActivity, sharedUserStoragePath };
+module.exports = { SharedTaskSlots, externalSessionActivity, normalizedPath, sharedUserStoragePath };
