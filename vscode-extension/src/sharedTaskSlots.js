@@ -40,8 +40,8 @@ function externalSessionActivity(projectRoot, leases, sessions) {
   let uncertain = 0;
   for (const session of sessions) {
     const project = sessionProjectOf(session);
-    // Lich's sessions contract includes projectPath. If it is missing, count
-    // the session conservatively because it cannot be proven unrelated.
+    // If a session has no project path, count it conservatively because it
+    // cannot be proven unrelated to the current workspace.
     if (project && project !== root) continue;
     const sessionId = sessionIdOf(session);
     if (sessionId && activeLeaseIds.has(sessionId)) continue;
@@ -264,7 +264,7 @@ class SharedTaskSlots {
       const reconciled = await this.prune(projectRoot, ledger.leases, readSessions);
       ledger.leases = reconciled.leases;
       // Session inventory is part of the safety boundary: without it, we cannot
-      // know whether another window or an untracked Lich session already uses a
+      // know whether another window or an untracked provider session already uses a
       // slot. Do not start a task based on an unverifiable count.
       if (!reconciled.verified) return { reserved: false, reason: 'sessions-unverified' };
       const key = `${runId}:${taskId}`;

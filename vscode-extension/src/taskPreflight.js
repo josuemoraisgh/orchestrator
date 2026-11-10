@@ -7,7 +7,7 @@ function applyPendingDispatchAbort(task, run) {
     task.attempts = Math.max(0, (Number(task.attempts) || 0) - 1);
     task.error = '';
     task.history ||= [];
-    task.history.push({ at: Date.now(), event: 'paused-before-dispatch', detail: 'A pausa foi solicitada antes da abertura da sessão Lich; nenhuma tentativa de agente foi consumida.' });
+    task.history.push({ at: Date.now(), event: 'paused-before-dispatch', detail: 'A pausa foi solicitada antes da abertura da sessão do agente; nenhuma tentativa foi consumida.' });
     return true;
   }
   if (['cancelling', 'cancelled'].includes(run.status) || ['cancelling', 'cancelled'].includes(task.status)) {
@@ -15,7 +15,7 @@ function applyPendingDispatchAbort(task, run) {
     task.status = 'cancelled';
     task.error = '';
     task.history ||= [];
-    task.history.push({ at: Date.now(), event: 'cancelled-before-dispatch', detail: 'O cancelamento foi recebido antes da abertura da sessão Lich; nenhuma tentativa de agente foi consumida.' });
+    task.history.push({ at: Date.now(), event: 'cancelled-before-dispatch', detail: 'O cancelamento foi recebido antes da abertura da sessão do agente; nenhuma tentativa foi consumida.' });
     return true;
   }
   return false;

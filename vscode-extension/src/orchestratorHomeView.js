@@ -926,7 +926,7 @@ class OrchestratorHomeView {
         if (!model) throw new Error(`Escolha um modelo com chamadas de ferramentas para ${provider.name} na tarefa ${task.id}.`);
         task.model = model.id;
       } else if (task.executor === 'lich-cli') {
-        throw new Error(`Task ${task.id} cannot start a new agent through the transitional Lich adapter; choose a native executor.`);
+        throw new Error(`A tarefa ${task.id} não pode iniciar um agente novo pelo adaptador Lich; escolha um executor nativo.`);
       } else if (task.executor === 'codex-app-server' && (provider.id !== 'codex' || !provider.canRunCodexAppServer)) {
         throw new Error(`Codex app-server não está disponível para a tarefa ${task.id}.`);
       } else if (task.executor === 'codex-app-server') {

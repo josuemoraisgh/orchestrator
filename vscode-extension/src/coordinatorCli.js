@@ -208,7 +208,7 @@ async function runCoordinator(profile, provider, storageRoot, cwd, prompt, model
         properties: {
           runId: { type: 'string', minLength: 1, maxLength: 120 }, taskId: { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,39}$' },
           provider: { type: 'string', minLength: 1, maxLength: 120 },
-          executor: { type: 'string', enum: ['vscode-model', 'codex-app-server', 'claude-code-cli', 'lich-cli'] },
+          executor: { type: 'string', enum: ['vscode-model', 'codex-app-server', 'claude-code-cli'] },
           profileId: { type: 'string', maxLength: 120 }, model: { type: 'string', maxLength: 160 }, effort: { type: 'string', maxLength: 40 },
           context: { type: 'string', minLength: 1, maxLength: 5000 }
         }
@@ -226,7 +226,7 @@ async function runCoordinator(profile, provider, storageRoot, cwd, prompt, model
                 id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' },
                 acceptanceCriteria: { type: 'array', items: { type: 'string' } },
                 dependsOn: { type: 'array', items: { type: 'string' } },
-                provider: { type: 'string' }, profileId: { type: 'string' }, executor: { type: 'string', enum: ['auto', 'vscode-model', 'codex-app-server', 'claude-code-cli', 'lich-cli'] }, model: { type: 'string' }, effort: { type: 'string' }, worktree: { type: 'string' }, base: { type: 'string' },
+                provider: { type: 'string' }, profileId: { type: 'string' }, executor: { type: 'string', enum: ['auto', 'vscode-model', 'codex-app-server', 'claude-code-cli'] }, model: { type: 'string' }, effort: { type: 'string' }, worktree: { type: 'string' }, base: { type: 'string' },
                 estimatedCostUsd: { type: ['number', 'null'] }
               }
             }
