@@ -29,6 +29,7 @@ const { resolveUpstreamDirectory } = require('./upstreamPaths');
 const { sharedUserStoragePath } = require('./sharedTaskSlots');
 const { normalizeLichStartDelivery, normalizeLichWaitOutcome } = require('./lichDelivery');
 const { loadProjectGuidance } = require('./projectGuidance');
+const { upstreamSyncInvocation } = require('./upstreamSyncInvocation');
 
 const bundledSkills = path.resolve(__dirname, '..', 'skills');
 const releaseManifestPath = path.resolve(__dirname, '..', 'upstream-releases.json');
@@ -1856,9 +1857,8 @@ function activate(context) {
   registerTool(context, 'orchestrator-ai_stop_lich_task', (ctx, input) => stopLichTask(ctx, input), input => confirmInvocation(
     'Stop and park this agent task?', `Stop session ${input.session || '(missing session)'} and preserve its checkout and uncommitted changes.`, 'Stopping agent task'
   ));
-  registerTool(context, 'orchestrator-ai_sync_upstreams', syncUpstreams, () => confirmInvocation(
-    'Update project upstreams?', 'Fetch and fast-forward only the repositories declared in .ai/orchestrator.json. Dirty repositories stop the operation.', 'Synchronizing project upstreams'
-  ));
+  registerTool(context, 'orchestrator-ai_sync_upstreams', syncUpstreams, async () =>
+    upstreamSyncInvocation(await readProjectConfigOptional()));
   registerTool(context, 'orchestrator-ai_run_build', runConfiguredBuild, () => confirmInvocation(
     'Synchronize and build this project?', 'The configured upstream repositories will be fast-forwarded, then the configured build command will run.', 'Syncing upstreams and building'
   ));
