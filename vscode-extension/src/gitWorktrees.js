@@ -41,6 +41,12 @@ function safePart(value) {
   return cleaned || 'task';
 }
 
+function normalizedPath(value, platform = process.platform) {
+  const pathApi = platform === 'win32' ? path.win32 : path.posix;
+  const resolved = pathApi.resolve(String(value || '')).replace(/\\/g, '/');
+  return platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
 function includePatternMatches(relativePath, pattern) {
   const normalized = String(relativePath || '').replace(/\\/g, '/').replace(/^\.\//, '');
   const source = String(pattern || '').trim();
@@ -62,9 +68,9 @@ class GitWorktrees {
     if (existingPath) {
       const target = path.resolve(existingPath);
       const entries = parseWorktrees(await git(['worktree', 'list', '--porcelain'], root));
-      const canonicalTarget = await fs.realpath(target);
-      const match = await Promise.all(entries.map(async item => ({ item, canonical: item.worktree ? await fs.realpath(item.worktree).catch(() => '') : '' })))
-        .then(items => items.find(value => value.canonical.toLowerCase() === canonicalTarget.toLowerCase())?.item);
+      const canonicalTarget = normalizedPath(await fs.realpath(target));
+      const match = await Promise.all(entries.map(async item => ({ item, canonical: item.worktree ? normalizedPath(await fs.realpath(item.worktree).catch(() => '')) : '' })))
+        .then(items => items.find(value => value.canonical === canonicalTarget)?.item);
       if (!match) throw new Error('O checkout salvo não aparece na lista oficial de worktrees do Git.');
       const branch = String(match.branch || '').replace(/^refs\/heads\//, '');
       let includedFiles = [];
@@ -92,7 +98,7 @@ class GitWorktrees {
       baseRef = await git(['rev-parse', '--verify', '--quiet', `${baseRefName}^{commit}`], root)
         .catch(() => { throw new Error(`A branch base local ${requestedBase} não existe ou não aponta para um commit.`); });
     }
-    const repoKey = crypto.createHash('sha256').update(root.toLocaleLowerCase()).digest('hex').slice(0, 20);
+    const repoKey = crypto.createHash('sha256').update(normalizedPath(root)).digest('hex').slice(0, 20);
     const target = path.join(this.storageRoot, 'worktrees', repoKey, `${safePart(runId)}-${safePart(taskId)}-${Math.max(1, Number(attempt) || 1)}`);
     try { await fs.access(target); throw new Error(`O caminho da worktree já existe: ${target}`); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -177,4 +183,4 @@ function isWithin(root, target) {
   return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`));
 }
 
-module.exports = { GitWorktrees, parseWorktrees, safePart, includePatternMatches, isIncludedPath };
+module.exports = { GitWorktrees, parseWorktrees, safePart, normalizedPath, includePatternMatches, isIncludedPath };

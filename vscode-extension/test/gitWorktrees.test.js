@@ -6,7 +6,13 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { GitWorktrees, parseWorktrees, includePatternMatches, isIncludedPath } = require('../src/gitWorktrees');
+const { GitWorktrees, parseWorktrees, normalizedPath, includePatternMatches, isIncludedPath } = require('../src/gitWorktrees');
+
+test('worktree path identity follows filesystem case sensitivity', () => {
+  assert.equal(normalizedPath('C:\\Projects\\Orchestrator', 'win32'), 'c:/projects/orchestrator');
+  assert.equal(normalizedPath('/home/user/Projects/Orchestrator', 'linux'), '/home/user/Projects/Orchestrator');
+  assert.equal(normalizedPath('/home/user/Projects/Orchestrator', 'darwin'), '/home/user/Projects/Orchestrator');
+});
 
 async function repoFixture(t) {
   const base = await fs.mkdtemp(path.join(os.tmpdir(), 'orchestrator-worktrees-'));
