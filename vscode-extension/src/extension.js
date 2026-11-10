@@ -276,6 +276,29 @@ function workspaceRoot() {
   return folder.uri.fsPath;
 }
 
+async function readProjectConfigOptional(root) {
+  const projectRoot = root || vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath;
+  if (!projectRoot) return {};
+  const configPath = path.join(projectRoot, '.ai', 'orchestrator.json');
+  let contents;
+  try { contents = await fs.readFile(configPath, 'utf8'); }
+  catch (error) {
+    if (error.code === 'ENOENT') return {};
+    throw error;
+  }
+  let config;
+  try { config = JSON.parse(contents); }
+  catch (error) { throw new Error(`A configuração .ai/orchestrator.json contém JSON inválido: ${error.message || error}`); }
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new Error('A configuração .ai/orchestrator.json precisa conter um objeto JSON.');
+  }
+  return config;
+}
+
+async function readProjectConfig() {
+  return readProjectConfigOptional(workspaceRoot());
+}
+
 function requireTrustedWorkspace(action = 'Esta ação') {
   if (!vscode.workspace.isTrusted) throw new Error(`${action} exige uma pasta confiável. Use “Workspace: Manage Workspace Trust” e confie neste projeto para continuar.`);
 }
