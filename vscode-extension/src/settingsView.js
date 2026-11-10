@@ -11,6 +11,7 @@ class OrchestratorSettingsView {
     this.panel = undefined;
     this.authStatuses = {};
     this.loadedKnowledgePages = new Map();
+    this.workspaceGeneration = 0;
     this.modelListener = vscode.lm.onDidChangeChatModels(() => {
       void this.refreshProviders();
     });
@@ -18,7 +19,7 @@ class OrchestratorSettingsView {
       void this.refreshProviders();
     });
     this.trustListener = vscode.workspace.onDidGrantWorkspaceTrust?.(() => { void this.refresh(); });
-    this.workspaceListener = vscode.workspace.onDidChangeWorkspaceFolders?.(() => { void this.refresh(); });
+    this.workspaceListener = vscode.workspace.onDidChangeWorkspaceFolders?.(() => this.onWorkspaceChanged());
   }
 
   async openPanel() {
@@ -48,6 +49,12 @@ class OrchestratorSettingsView {
     this.trustListener?.dispose();
     this.workspaceListener?.dispose();
     this.panel?.dispose();
+  }
+
+  onWorkspaceChanged() {
+    this.workspaceGeneration++;
+    this.loadedKnowledgePages.clear();
+    void this.refresh();
   }
 
   async getState() {
@@ -156,7 +163,11 @@ class OrchestratorSettingsView {
         return this.send({ type: 'knowledgePageCreated', path: result.page.path, pageId: result.page.pageId, scope: result.scope });
       }
       if (message.type === 'loadKnowledgePage') {
+        const workspaceGeneration = this.workspaceGeneration || 0;
         const result = await this.actions.loadKnowledgePage(String(message.path || ''));
+        if (workspaceGeneration !== (this.workspaceGeneration || 0)) {
+          throw new Error('O projeto mudou durante o carregamento da página. Carregue-a novamente no workspace atual.');
+        }
         const pageToken = crypto.randomUUID();
         this.loadedKnowledgePages.set(pageToken, result);
         while (this.loadedKnowledgePages.size > 20) this.loadedKnowledgePages.delete(this.loadedKnowledgePages.keys().next().value);
@@ -739,6 +750,13 @@ class OrchestratorSettingsView {
       byId('upstreams').append(row);
     }
     function load(stateValue) {
+      const workspaceChanged = state !== undefined && state.workspace !== (stateValue?.workspace || '');
+      if (workspaceChanged) {
+        knowledgePageLoadRequest++;
+        loadedKnowledgePage = undefined;
+        byId('memoryKnowledgeEditor').hidden = true;
+        byId('memoryKnowledgeEditStatus').textContent = 'O projeto mudou. Carregue novamente a página para editá-la no workspace atual.';
+      }
       state = stateValue;
       byId('workspace').textContent = state.hasWorkspace ? state.workspace : 'Abra uma pasta de projeto para configurar o Orquestrador.';
       byId('aiStatus').textContent = state.aiExists
@@ -750,7 +768,7 @@ class OrchestratorSettingsView {
       byId('memoryKnowledgeSearch').disabled = !state.hasWorkspace || !state.workspaceTrusted;
       byId('memoryKnowledgeCreate').disabled = !state.hasWorkspace || !state.workspaceTrusted;
       byId('memoryKnowledgeLoad').disabled = !state.hasWorkspace || !state.workspaceTrusted;
-      if (loadedKnowledgePage && state.workspace !== loadedKnowledgePage.workspace) {
+      if (!workspaceChanged && loadedKnowledgePage && state.workspace !== loadedKnowledgePage.workspace) {
         loadedKnowledgePage = undefined;
         byId('memoryKnowledgeEditor').hidden = true;
       }

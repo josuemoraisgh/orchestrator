@@ -307,6 +307,45 @@ test('settings state read failures are sent to the webview instead of remaining 
   assert.equal(messages[0].text, 'state unavailable');
 });
 
+test('changing project scope invalidates loaded AI Memory page tokens', async () => {
+  const settings = Object.create(OrchestratorSettingsView.prototype);
+  settings.workspaceGeneration = 4;
+  settings.loadedKnowledgePages = new Map([['old-page-token', { root: 'C:/old-project' }]]);
+  settings.refresh = async () => {};
+
+  settings.onWorkspaceChanged();
+
+  assert.equal(settings.workspaceGeneration, 5);
+  assert.equal(settings.loadedKnowledgePages.size, 0);
+});
+
+test('AI Memory page loads finishing after a workspace change are discarded', async () => {
+  const originalTrusted = mockVscode.workspace.isTrusted;
+  const sent = [];
+  const settings = Object.create(OrchestratorSettingsView.prototype);
+  settings.workspaceGeneration = 2;
+  settings.loadedKnowledgePages = new Map();
+  settings.actions = {
+    loadKnowledgePage: async pagePath => {
+      settings.onWorkspaceChanged();
+      return { root: 'C:/old-project', scope: { workspace: 'work', project: 'old-project' }, page: { path: pagePath, pageId: 'old-page' } };
+    }
+  };
+  settings.refresh = async () => {};
+  settings.send = async message => { sent.push(message); };
+
+  try {
+    mockVscode.workspace.isTrusted = true;
+    await settings.onMessage({ type: 'loadKnowledgePage', path: 'decisions.md', requestId: 'load-1' });
+    assert.equal(settings.loadedKnowledgePages.size, 0);
+    assert.equal(sent.some(message => message.type === 'knowledgePageLoaded'), false);
+    assert.equal(sent.find(message => message.type === 'knowledgeOperationError')?.requestId, 'load-1');
+    assert.match(sent.find(message => message.type === 'knowledgeOperationError')?.text || '', /projeto mudou durante o carregamento/i);
+  } finally {
+    mockVscode.workspace.isTrusted = originalTrusted;
+  }
+});
+
 test('settings view routes project knowledge operations and blocks them in Restricted Mode', async () => {
   const originalTrusted = mockVscode.workspace.isTrusted;
   const sent = [];
