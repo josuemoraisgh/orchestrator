@@ -47,6 +47,11 @@ function normalizedPath(value, platform = process.platform) {
   return platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
+function branchNameKey(value, platform = process.platform) {
+  const branch = String(value || '').replace(/^refs\/heads\//, '');
+  return platform === 'win32' ? branch.toLowerCase() : branch;
+}
+
 function includePatternMatches(relativePath, pattern) {
   const normalized = String(relativePath || '').replace(/\\/g, '/').replace(/^\.\//, '');
   const source = String(pattern || '').trim();
@@ -84,7 +89,8 @@ class GitWorktrees {
       : `orchestrator/${safePart(runId)}-${safePart(taskId)}-${Math.max(1, Number(attempt) || 1)}`;
     if (!branch || branch.split('/').some(part => !part || part === '.' || part === '..')) throw new Error('Nome de branch inválido para worktree.');
     const entries = parseWorktrees(await git(['worktree', 'list', '--porcelain'], root));
-    const existingBranch = entries.find(item => String(item.branch || '').replace(/^refs\/heads\//, '').toLowerCase() === branch.toLowerCase());
+    const requestedBranchKey = branchNameKey(branch);
+    const existingBranch = entries.find(item => branchNameKey(item.branch || '') === requestedBranchKey);
     if (existingBranch) throw new Error(`A branch ${branch} já está associada à worktree ${existingBranch.worktree || '(caminho desconhecido)'}.`);
     const branchCheck = await git(['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], root).then(() => true, error => error.code === 1 ? false : Promise.reject(error));
     if (branchCheck) throw new Error(`A branch ${branch} já existe; escolha outro nome para evitar reutilizar trabalho sem confirmação.`);
@@ -183,4 +189,4 @@ function isWithin(root, target) {
   return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`));
 }
 
-module.exports = { GitWorktrees, parseWorktrees, safePart, normalizedPath, includePatternMatches, isIncludedPath };
+module.exports = { GitWorktrees, parseWorktrees, safePart, normalizedPath, branchNameKey, includePatternMatches, isIncludedPath };

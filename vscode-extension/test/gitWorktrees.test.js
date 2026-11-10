@@ -6,12 +6,18 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { GitWorktrees, parseWorktrees, normalizedPath, includePatternMatches, isIncludedPath } = require('../src/gitWorktrees');
+const { GitWorktrees, parseWorktrees, normalizedPath, branchNameKey, includePatternMatches, isIncludedPath } = require('../src/gitWorktrees');
 
 test('worktree path identity follows filesystem case sensitivity', () => {
   assert.equal(normalizedPath('C:\\Projects\\Orchestrator', 'win32'), 'c:/projects/orchestrator');
   assert.equal(normalizedPath('/home/user/Projects/Orchestrator', 'linux'), '/home/user/Projects/Orchestrator');
   assert.equal(normalizedPath('/home/user/Projects/Orchestrator', 'darwin'), '/home/user/Projects/Orchestrator');
+});
+
+test('worktree branch identity follows platform ref storage semantics', () => {
+  assert.equal(branchNameKey('refs/heads/Feature/Task', 'win32'), 'feature/task');
+  assert.equal(branchNameKey('refs/heads/Feature/Task', 'linux'), 'Feature/Task');
+  assert.equal(branchNameKey('refs/heads/Feature/Task', 'darwin'), 'Feature/Task');
 });
 
 async function repoFixture(t) {
