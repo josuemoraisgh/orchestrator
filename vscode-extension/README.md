@@ -1,6 +1,6 @@
 # Orchestrator-AI VS Code extension
 
-This extension contributes a reusable **Orquestrador** agent to the VS Code Chat agent picker and tools for initializing project guidance, installing/checking the managed AI Memory runtime and Lich compatibility adapter, delegating bounded work, synchronizing configured upstream repositories, and building a project.
+This extension contributes a reusable **Orquestrador** agent to the VS Code Chat agent picker and tools for initializing project guidance, checking the managed AI Memory runtime, coordinating bounded work, synchronizing configured upstream repositories, and building a project.
 
 The extension is project-neutral. Each project owns its requirements in `.ai/specs/`, and receives generic procedures in `.ai/skills/`. On activation, it opens an Orquestrador view in the Secondary Side Bar with its own conversation list and message composer. The coordinator can use a VS Code language model or a read-only Claude/Codex CLI profile. Worker tasks use Orchestrator-owned VS Code model, Codex app-server, or Claude Code CLI adapters where available; other compatible CLIs can use the transitional Lich executor. Task continuity is stored locally and in verified AI Memory pages when available. Settings open from the gear in the Chat or Orquestrador view title.
 
@@ -53,11 +53,9 @@ Declare source repositories and build details in the Configurações dialog, ope
 ## Tools
 
 - `#initializeProjectGuidance` creates `.ai/specs`, `.ai/skills`, and a starter configuration without overwriting files.
-- `#checkOrchestratorTools` checks the local `lich` and `ai-memory` commands.
-- `#listLichSessions` lists live sessions.
-- The native `@Orquestrador` profile cannot start or transfer Lich work outside the persistent plan review in the Orquestrador tab.
-- `#stopLichTask` stops and parks an active Lich session without deleting its checkout.
-- Lich tasks are resumed and handed off from the Orquestrador task board, where the approved plan and task memory remain attached.
+- `#checkOrchestratorTools` reports the managed AI Memory runtime status.
+- New work is planned, approved, dispatched, and handed off through the Orquestrador task board. It does not expose direct Lich session controls as chat tools.
+- Previously persisted Lich tasks remain visible to the task board for migration and recovery; the Lich executor remains transitional while native adapters cover additional providers.
 - `#syncProjectUpstreams` fast-forward updates only configured upstreams, with confirmation.
 - `#syncAndBuildProject` syncs first and then runs the configured build, with confirmation.
 

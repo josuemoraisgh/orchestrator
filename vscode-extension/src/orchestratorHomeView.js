@@ -448,7 +448,7 @@ class OrchestratorHomeView {
       const cancellation = new vscode.CancellationTokenSource();
       const languageModelReadTools = (vscode.lm.tools || []).filter(tool => {
         const name = String(tool.name || '').toLowerCase();
-        if (name.startsWith('orchestratorai.')) return ['orchestratorai.check_tools', 'orchestratorai.list_lich_sessions'].includes(name);
+        if (name.startsWith('orchestratorai.')) return ['orchestratorai.check_tools'].includes(name);
         return (name.includes('ai-memory') || name.includes('ai_memory') || name.includes('memory_')) && /(?:query|search|read|recent|brief|list|status|explore)/.test(name);
       });
       const bridgeTools = await this.findMemoryToolList(state.workspace).catch(() => []);

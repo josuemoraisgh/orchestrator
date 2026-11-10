@@ -43,7 +43,7 @@
       },
       {
         "command": "orchestratorAi.checkTools",
-        "title": "Orchestrator: Check AI Memory Runtime and Optional Lich Adapter"
+        "title": "Orchestrator: Check Managed AI Memory"
       },
       {
         "command": "orchestratorAi.openChat",
@@ -100,7 +100,7 @@
       {
         "name": "orchestrator-ai_install_dependencies",
         "displayName": "Install or start AI Memory runtime",
-        "modelDescription": "Install and start the exact stable AI Memory release pinned in this extension build under Orchestrator storage. The optional Lich compatibility adapter is not installed or started.",
+        "modelDescription": "Install and start the exact stable AI Memory release pinned in this extension build under Orchestrator storage.",
         "userDescription": "Install or start Orchestrator's managed AI Memory runtime.",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "installOrchestratorDependencies",
@@ -112,127 +112,14 @@
       },
       {
         "name": "orchestrator-ai_check_tools",
-        "displayName": "Check orchestrator tools",
-        "modelDescription": "Check the managed AI Memory runtime and report whether an optional Lich compatibility adapter is available. This is read-only.",
+        "displayName": "Check managed AI Memory",
+        "modelDescription": "Check the status of the Orchestrator-managed AI Memory runtime. This is read-only.",
         "userDescription": "Check Orchestrator-managed runtime availability.",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "checkOrchestratorTools",
         "inputSchema": {
           "type": "object",
           "properties": {},
-          "additionalProperties": false
-        }
-      },
-      {
-        "name": "orchestrator-ai_list_lich_sessions",
-        "displayName": "List lich sessions",
-        "modelDescription": "List live lich coding-agent sessions for this workspace. Read-only.",
-        "userDescription": "Show available lich agent sessions.",
-        "canBeReferencedInPrompt": true,
-        "toolReferenceName": "listLichSessions",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-      },
-      {
-        "name": "orchestrator-ai_delegate_lich_task",
-        "displayName": "Delegate a task with lich",
-        "modelDescription": "Open a specialist agent session in lich for this project, optionally in an isolated worktree. Use for a bounded independent task and report the created session. This changes local agent state and requires user confirmation.",
-        "userDescription": "Start a bounded task in a lich agent session.",
-        "canBeReferencedInPrompt": true,
-        "toolReferenceName": "delegateWithLich",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "task": {
-              "type": "string",
-              "description": "A bounded task with a concrete expected result."
-            },
-            "provider": {
-              "type": "string",
-              "description": "Optional Lich provider override; it must be enabled in the Orchestrator's allowed worker providers. Defaults to the configured Lich worker provider when allowed."
-            },
-            "model": {
-              "type": "string",
-              "description": "Optional model override; defaults to the configured lich model."
-            },
-            "effort": {
-              "type": "string",
-              "description": "Optional reasoning effort override; defaults to the configured lich effort."
-            },
-            "worktree": {
-              "type": "string",
-              "description": "Optional new worktree branch name. Use the literal 'current' only when the task must operate on the currently open checkout (including uncommitted files); this shares the project's local changes. Leave empty to create an isolated worktree."
-            }
-          },
-          "required": [
-            "task"
-          ],
-          "additionalProperties": false
-        }
-      },
-      {
-        "name": "orchestrator-ai_stop_lich_task",
-        "displayName": "Stop a Lich task",
-        "modelDescription": "Stop an active Lich session and park it while preserving its project checkout and changes. The user must confirm.",
-        "userDescription": "Stop and preserve an active agent task.",
-        "canBeReferencedInPrompt": true,
-        "toolReferenceName": "stopLichTask",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "session": {
-              "type": "string",
-              "description": "Lich session id, name, or label."
-            }
-          },
-          "required": [
-            "session"
-          ],
-          "additionalProperties": false
-        }
-      },
-      {
-        "name": "orchestrator-ai_continue_lich_task",
-        "displayName": "Continue a task with an agent",
-        "modelDescription": "Continue work from a Lich session, either in the same Claude conversation with a new model/effort or by stopping and parking the old session then starting another supported Lich provider in the same checkout. Include a concise handoff when changing providers. The user must confirm.",
-        "userDescription": "Stop or switch agents and continue a task with a handoff.",
-        "canBeReferencedInPrompt": true,
-        "toolReferenceName": "continueLichTask",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "session": {
-              "type": "string",
-              "description": "Existing Lich session id, name, or label."
-            },
-            "task": {
-              "type": "string",
-              "description": "The next bounded task to perform."
-            },
-            "provider": {
-              "type": "string",
-              "description": "Optional destination CLI provider supported by Lich, for example claude or codex."
-            },
-            "model": {
-              "type": "string",
-              "description": "Optional model override for the next task."
-            },
-            "effort": {
-              "type": "string",
-              "description": "Optional effort override for the next task."
-            },
-            "handoff": {
-              "type": "string",
-              "description": "Short status, findings, files changed, and remaining steps from the previous agent."
-            }
-          },
-          "required": [
-            "session",
-            "task"
-          ],
           "additionalProperties": false
         }
       },

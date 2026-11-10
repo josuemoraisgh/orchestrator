@@ -237,8 +237,6 @@ function configuredAgentContents(orchestration) {
     'local.orchestrator-ai/orchestrator-ai_initialize_workspace',
     'local.orchestrator-ai/orchestrator-ai_install_dependencies',
     'local.orchestrator-ai/orchestrator-ai_check_tools',
-    'local.orchestrator-ai/orchestrator-ai_list_lich_sessions',
-    'local.orchestrator-ai/orchestrator-ai_stop_lich_task',
     'local.orchestrator-ai/orchestrator-ai_sync_upstreams',
     'local.orchestrator-ai/orchestrator-ai_run_build'];
   const providers = (orchestration.availableProviders || []).map(provider => `${provider.name} (${provider.source})`).join(', ') || 'nenhum provedor detectado ainda';
@@ -1315,14 +1313,8 @@ async function initializeWorkspace() {
 }
 
 async function checkTools(context, memoryRuntime) {
-  const root = workspaceRoot();
-  const projectConfig = await readProjectConfigOptional();
-  const lich = await toolExecutable(context, 'lich', projectConfig.tools?.lichCommand || 'lich');
-  const checks = await Promise.allSettled([run(lich, ['version', '--json'], root, 10000), memoryRuntime.status()]);
-  const label = (name, item) => item.status === 'fulfilled'
-    ? `${name}: available\n${typeof item.value === 'string' ? item.value : JSON.stringify(item.value)}`
-    : `${name}: unavailable\n${String(item.reason?.message || item.reason)}`;
-  return `${label('optional Lich compatibility adapter (not installed by Orchestrator)', checks[0])}\n\n${label('AI Memory private runtime', checks[1])}`;
+  const status = await memoryRuntime.status();
+  return `AI Memory private runtime: ${status.status || 'unknown'}\n${JSON.stringify(status)}`;
 }
 
 async function listProjectAiMemoryTools(context, root, memoryRuntime) {
@@ -1848,10 +1840,6 @@ function activate(context) {
   registerTool(context, 'orchestrator-ai_check_tools', () => checkTools(context, memoryRuntime));
   registerTool(context, 'orchestrator-ai_install_dependencies', () => installDependencies(context, undefined, memoryRuntime), () => confirmInvocation(
     'Install or start AI Memory?', 'Install and start the pinned AI Memory runtime with SHA-256 verification. Codex configuration and lifecycle hooks are not changed. The optional Lich compatibility adapter is not installed or started.', 'Preparing AI Memory'
-  ));
-  registerTool(context, 'orchestrator-ai_list_lich_sessions', ctx => listLichSessions(ctx));
-  registerTool(context, 'orchestrator-ai_stop_lich_task', (ctx, input) => stopLichTask(ctx, input), input => confirmInvocation(
-    'Stop and park this agent task?', `Stop session ${input.session || '(missing session)'} and preserve its checkout and uncommitted changes.`, 'Stopping agent task'
   ));
   registerTool(context, 'orchestrator-ai_sync_upstreams', syncUpstreams, async () =>
     upstreamSyncInvocation(await readProjectConfigOptional()));
