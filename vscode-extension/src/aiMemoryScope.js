@@ -1,5 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const crypto = require('node:crypto');
+const { pathIdentity } = require('./pathIdentity');
 
 const SAFE_SCOPE_NAME = /^[a-z0-9][a-z0-9._-]*$/;
 
@@ -32,6 +34,13 @@ function projectFromRemote(remote, identityStyle = 'path') {
   const projectPath = identityStyle === 'host_path' ? hostAndPath : hostAndPath.includes('/') ? hostAndPath.slice(hostAndPath.indexOf('/') + 1) : hostAndPath;
   const project = projectPath.split('/').filter(Boolean).join('-').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^[^a-z0-9]+/, '');
   return SAFE_SCOPE_NAME.test(project) ? project : '';
+}
+
+function projectFromPath(projectPath) {
+  const identity = pathIdentity(projectPath);
+  const label = path.basename(identity).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[^a-z0-9]+/, '').slice(0, 28) || 'project';
+  const suffix = crypto.createHash('sha256').update(identity).digest('hex').slice(0, 10);
+  return `${label}-${suffix}`;
 }
 
 async function findMarker(root, homeDir = process.env.USERPROFILE || process.env.HOME || '', repoRoot = '') {
@@ -71,7 +80,7 @@ async function resolveAiMemoryScope(root, options = {}) {
   }
   if (!project) {
     const fallback = values.project_strategy === 'repo-root' && repoRoot ? repoRoot : root;
-    project = path.basename(path.resolve(fallback)).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[^a-z0-9]+/, '');
+    project = projectFromPath(fallback);
   }
   if (!SAFE_SCOPE_NAME.test(workspace) || !SAFE_SCOPE_NAME.test(project)) {
     throw new Error(`AI Memory scope is invalid (${workspace}/${project}). Use lowercase letters, digits, dots, dashes, and underscores; configure workspace and project in Orchestrator settings.`);
@@ -79,4 +88,4 @@ async function resolveAiMemoryScope(root, options = {}) {
   return { workspace, project, source };
 }
 
-module.exports = { findMarker, parseAiMemoryMarker, projectFromRemote, resolveAiMemoryScope };
+module.exports = { findMarker, parseAiMemoryMarker, projectFromPath, projectFromRemote, resolveAiMemoryScope };
