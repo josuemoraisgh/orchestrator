@@ -23,7 +23,7 @@ const { AiMemoryRuntime } = require('./aiMemoryRuntime');
 const { extensionStoragePath } = require('./extensionStorage');
 const { canAutoInstallWorkspaceTools } = require('./workspaceReadiness');
 const { ensureManagedAiMemory } = require('./managedRuntimeSetup');
-const { resolveWorkerDefaults } = require('./workerDefaults');
+const { resolveWorkerDefaults, supportsWorker } = require('./workerDefaults');
 const { resolveCoordinatorSettingsMode } = require('./coordinatorReadiness');
 const { recoverConfiguredCoordinatorProfile } = require('./coordinatorProfileRecovery');
 const { resolveUpstreamDirectory } = require('./upstreamPaths');
@@ -572,7 +572,7 @@ async function startVscodeModelTask(context, modelSessions, input, taskJournal, 
   const task = input.task;
   const config = await readProjectConfigOptional();
   const options = await listOrchestrationOptions();
-  const allowed = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(item => item.canRunInLich && item.cliKind || item.canRunInVscodeModel || item.canRunCodexAppServer).map(item => item.id);
+  const allowed = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(supportsWorker).map(item => item.id);
   const provider = options.providers.find(item => item.id === task.provider && item.canRunInVscodeModel && allowed.includes(item.id));
   if (!provider) throw new Error(`O provedor ${task.provider} não está mais disponível ou autorizado para execução pelo VS Code.`);
   if (!provider.workerModels?.some(model => model.id === task.model)) throw new Error(`O modelo ${task.model} não está mais publicado com ferramentas pelo provedor ${task.provider}.`);
@@ -648,7 +648,7 @@ async function startCodexAppServerTask(context, sessions, input, taskJournal, wo
   if (task.provider !== 'codex') throw new Error('O executor Codex app-server só pode executar tarefas do provedor Codex.');
   const config = await readProjectConfigOptional();
   const options = await listOrchestrationOptions();
-  const allowed = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(item => item.canRunInLich && item.cliKind || item.canRunInVscodeModel || item.canRunCodexAppServer).map(item => item.id);
+  const allowed = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(supportsWorker).map(item => item.id);
   const provider = options.providers.find(item => item.id === 'codex' && item.canRunCodexAppServer && allowed.includes('codex'));
   if (!provider) throw new Error('A CLI oficial do Codex não está disponível ou autorizada para tarefas do Orchestrator.');
   const profiles = coordinatorProfiles(context);
@@ -817,7 +817,7 @@ async function startClaudeCodeTask(context, sessions, input, taskJournal, worktr
   const options = await listOrchestrationOptions();
   const allowed = Array.isArray(config.orchestration?.allowedProviders)
     ? config.orchestration.allowedProviders
-    : options.providers.filter(item => item.canRunInLich || item.canRunInVscodeModel || item.canRunCodexAppServer || item.canRunClaudeCode).map(item => item.id);
+    : options.providers.filter(supportsWorker).map(item => item.id);
   const provider = options.providers.find(item => item.id === 'claude' && item.canRunClaudeCode && allowed.includes('claude'));
   if (!provider) throw new Error('A CLI oficial do Claude Code não está disponível ou autorizada para esta tarefa.');
   const profiles = coordinatorProfiles(context);
@@ -1392,14 +1392,6 @@ function workspaceRootOrStorage(context) {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || extensionStoragePath(context);
 }
 
-async function listLichSessions(context) {
-  const root = workspaceRoot();
-  const config = await readProjectConfigOptional();
-  const executable = await toolExecutable(context, 'lich', config.tools?.lichCommand || 'lich');
-  const response = await run(executable, ['sessions', '--json'], root, 15000);
-  return response.stdout || '[]';
-}
-
 async function lichSessionRecords(context, root) {
   const config = await readProjectConfigOptional();
   const executable = await toolExecutable(context, 'lich', config.tools?.lichCommand || 'lich');
@@ -1413,179 +1405,6 @@ function closeLichSessionArgs(record, root, forceKeepWorktree = false) {
   if (forceKeepWorktree || (record.path && project && path.resolve(record.path) !== path.resolve(project))) args.push('--worktree', 'keep');
   args.push(String(record.id || record.label || record.name));
   return args;
-}
-
-async function stopLichTask(context, input) {
-  requireTrustedWorkspace('Parar uma sessão Lich');
-  const root = workspaceRoot();
-  const sessionId = String(input.session || '').trim();
-  if (!sessionId) throw new Error('Informe o ID ou nome da sessão para parar.');
-  const { executable, sessions } = await lichSessionRecords(context, root);
-  const session = sessions.find(item => item.id === sessionId || item.name === sessionId || item.label === sessionId);
-  if (!session) throw new Error(`A sessão ${sessionId} não está ativa no Lich.`);
-  await run(executable, closeLichSessionArgs(session, root), session.projectPath || root, 30000);
-  return `Sessão ${session.label || session.name || session.id} parada e estacionada. O checkout foi preservado em ${session.path || session.projectPath || root}.`;
-}
-
-async function continueLichTask(context, input) {
-  const root = workspaceRoot();
-  const sessionId = String(input.session || '').trim();
-  const task = String(input.task || '').trim();
-  if (!sessionId || !task) throw new Error('Informe session e task para continuar o trabalho.');
-  if (task.length > 7000) throw new Error('A tarefa excede o limite de 7000 caracteres.');
-  const { executable, config, sessions } = await lichSessionRecords(context, root);
-  const previous = sessions.find(item => item.id === sessionId || item.name === sessionId || item.label === sessionId);
-  const options = await listOrchestrationOptions();
-  const allowedProviders = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(item => item.canRunInLich && item.cliKind).map(item => item.id);
-  const defaultLegacyProvider = options.providers.find(item => item.id === config.workerDefaults?.provider && item.cliKind && allowedProviders.includes(item.id));
-  const provider = String(input.provider || defaultLegacyProvider?.id || previous.kind || config.orchestration?.providerId || '').trim();
-  if (!provider) throw new Error('Defina o provedor de destino nas Configurações ou informe provider.');
-  if (!allowedProviders.includes(provider)) throw new Error(`${provider} não está autorizado nas Configurações para esta tarefa.`);
-  const availableProvider = options.providers.find(item => item.id === provider);
-  if (!availableProvider?.cliKind) throw new Error(`${provider} não está disponível como agente CLI do Lich.`);
-  const model = String(input.model || (config.workerDefaults?.provider === provider ? config.workerDefaults.model : '') || '').trim();
-  const effort = String(input.effort || (config.workerDefaults?.provider === provider ? config.workerDefaults.effort : '') || '').trim();
-  const workingPath = previous.path || previous.projectPath || root;
-
-  if (previous.kind === 'claude' && provider === 'claude') {
-    if (previous.state === 'busy') await run(executable, ['control', '--project', previous.projectPath || root, previous.id || sessionId, 'abort'], root, 15000);
-    if (model) await run(executable, ['control', '--project', previous.projectPath || root, previous.id || sessionId, 'model', model], root, 15000);
-    if (effort) await run(executable, ['control', '--project', previous.projectPath || root, previous.id || sessionId, 'effort', effort], root, 15000);
-    const prompt = `${input.handoff ? `Continuação / contexto anterior:\n${String(input.handoff).slice(0, 5000)}\n\n` : ''}${task}`;
-    const response = await run(executable, ['control', '--project', previous.projectPath || root, previous.id || sessionId, 'prompt', prompt], root, 30000);
-    return `A sessão Claude ${previous.label || previous.id} recebeu a continuação${model ? ` com modelo ${model}` : ''}${effort ? ` e esforço ${effort}` : ''}.\n${response.stdout}`;
-  }
-
-  await run(executable, closeLichSessionArgs(previous, root), previous.projectPath || root, 30000);
-  const prompt = `Continue o trabalho que estava na sessão ${previous.label || previous.id} deste mesmo checkout. Primeiro examine o estado atual do Git e os arquivos alterados; preserve o trabalho existente.\n\nResumo/handoff anterior:\n${String(input.handoff || '(sem resumo fornecido; reconstrua o contexto a partir do checkout e das especificações)').slice(0, 5000)}\n\nPróxima tarefa:\n${task}`;
-  const args = ['open', '--project', workingPath, '--kind', availableProvider.cliKind, '--prompt', prompt, '--json'];
-  if (model) args.push('--model', model);
-  if (effort) args.push('--effort', effort);
-  const response = await run(executable, args, root, 60000);
-  return `Sessão anterior estacionada; a continuação começou com ${provider} em ${workingPath}.\n${response.stdout}`;
-}
-
-async function delegateWithLich(context, input) {
-  const root = workspaceRoot();
-  const task = String(input.task || '').trim();
-  if (!task) throw new Error('Informe task.');
-  if (task.length > 7000) throw new Error('A tarefa excede o limite de 7000 caracteres.');
-  const config = await readProjectConfigOptional();
-  const options = await listOrchestrationOptions();
-  const allowedProviders = Array.isArray(config.orchestration?.allowedProviders) ? config.orchestration.allowedProviders : options.providers.filter(item => item.canRunInLich && item.cliKind).map(item => item.id);
-  const defaultProvider = options.providers.find(item => item.id === config.workerDefaults?.provider && item.cliKind && allowedProviders.includes(item.id))?.id || options.providers.find(item => item.cliKind && allowedProviders.includes(item.id))?.id || '';
-  const provider = String(input.provider || defaultProvider).trim();
-  if (!provider) throw new Error('Instale ou configure Claude/Codex na seção de provedores para habilitar delegação Lich.');
-  if (!allowedProviders.includes(provider)) throw new Error(`${provider} não está autorizado nas Configurações para esta tarefa.`);
-  const availableProvider = options.providers.find(item => item.id === provider);
-  if (!availableProvider?.cliKind) throw new Error(`${provider} está disponível como modelo do Chat, mas não como CLI do Lich. Use a ferramenta nativa agent do Chat para delegar nesse provedor.`);
-  const executable = await toolExecutable(context, 'lich', config.tools?.lichCommand || 'lich');
-  const args = ['open', '--project', root, '--kind', availableProvider.cliKind, '--prompt', task, '--json'];
-  if (input.worktree) args.splice(args.length - 1, 0, '--worktree', String(input.worktree));
-  const workerDefaultsApply = config.workerDefaults?.provider === provider;
-  const model = String(input.model || (workerDefaultsApply ? config.workerDefaults.model : '') || '').trim();
-  const effort = String(input.effort || (workerDefaultsApply ? config.workerDefaults.effort : '') || '').trim();
-  if (model) args.push('--model', model);
-  if (effort) args.push('--effort', effort);
-  const response = await run(executable, args, root, 60000);
-  return response.stdout;
-}
-
-async function readProjectConfig() {
-  const file = path.join(workspaceRoot(), '.ai', 'orchestrator.json');
-  try {
-    return JSON.parse(await fs.readFile(file, 'utf8'));
-  } catch (error) {
-    if (error.code === 'ENOENT') throw new Error('Use ?Preparar projeto (.ai)? no painel do Orquestrador e defina build/upstreams em Configurações.');
-    throw new Error(`Invalid .ai/orchestrator.json: ${error.message}`);
-  }
-}
-
-async function readProjectConfigOptional() {
-  try { return await readProjectConfig(); }
-  catch (error) {
-    if (error.message.startsWith('Use ')) return { build: null, upstreams: [], tools: {}, orchestration: {}, workerDefaults: {}, aiMemory: {} };
-    throw error;
-  }
-}
-
-async function saveProjectSettings(context, settings) {
-  requireTrustedWorkspace('Salvar configurações do projeto');
-  const root = workspaceRoot();
-  const ai = path.join(root, '.ai');
-  const stat = await fs.stat(ai).catch(() => undefined);
-  if (!stat?.isDirectory()) throw new Error('Use ?Preparar projeto (.ai)? antes de salvar as configurações.');
-
-  const build = settings.build && String(settings.build.command || '').trim()
-    ? {
-        command: String(settings.build.command).trim(),
-        args: Array.isArray(settings.build.args) ? settings.build.args.map(String) : [],
-        cwd: String(settings.build.cwd || '.').trim() || '.',
-        timeoutMs: Math.max(1000, Number(settings.build.timeoutMs) || 1800000)
-      }
-    : null;
-  if (build) {
-    const buildCwd = path.resolve(root, build.cwd);
-    const relative = path.relative(root, buildCwd);
-    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-      throw new Error('A pasta do build precisa permanecer dentro do projeto.');
-    }
-  }
-
-  const upstreams = Array.isArray(settings.upstreams) ? settings.upstreams.map(item => ({
-    path: String(item.path || '').trim(),
-    remote: String(item.remote || '').trim(),
-    branch: String(item.branch || 'main').trim() || 'main'
-  })).filter(item => item.path || item.remote) : [];
-  for (const item of upstreams) {
-    if (!item.path || !item.remote) throw new Error('Cada upstream precisa de uma pasta relativa e um remote Git.');
-    if (path.isAbsolute(item.path)) throw new Error(`A pasta upstream deve ser relativa ao projeto: ${item.path}`);
-    const target = path.resolve(root, item.path);
-    const relative = path.relative(root, target);
-    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-      throw new Error(`A pasta upstream precisa permanecer dentro do projeto: ${item.path}`);
-    }
-    await resolveUpstreamDirectory(root, item.path);
-  }
-  const tools = {
-    lichCommand: String(settings.tools?.lichCommand || '').trim(),
-    aiMemoryCommand: String(settings.tools?.aiMemoryCommand || '').trim()
-  };
-  const aiMemory = {
-    workspace: String(settings.aiMemory?.workspace || '').trim(),
-    project: String(settings.aiMemory?.project || '').trim()
-  };
-  const scopePattern = /^[a-z0-9][a-z0-9._-]*$/;
-  if (Boolean(aiMemory.workspace) !== Boolean(aiMemory.project)) throw new Error('Informe workspace e project do AI Memory juntos, ou deixe os dois vazios para usar a detecção automática.');
-  if (aiMemory.workspace && (!scopePattern.test(aiMemory.workspace) || !scopePattern.test(aiMemory.project))) throw new Error('Workspace e project devem usar letras minúsculas, números, ponto, hífen ou sublinhado.');
-  const options = await listOrchestrationOptions();
-  const providerId = String(settings.orchestration?.providerId || '');
-  const { mode, selectedProvider, profileId } = resolveCoordinatorSettingsMode(providerId, settings.orchestration?.profileId, options.providers);
-  const requestedModelId = String(settings.orchestration?.modelId || '').trim();
-  const selectedModel = selectedProvider?.models.find(item => item.id === requestedModelId);
-  if (mode === 'vscode' && requestedModelId && !selectedModel) throw new Error(`O modelo ${requestedModelId} não está publicado pela API do VS Code para ${selectedProvider?.name || providerId}. Selecione um modelo detectado.`);
-  const coordinatorModel = mode === 'vscode' ? (selectedModel || selectedProvider?.models?.[0]) : undefined;
-  const modelId = mode === 'cli' ? requestedModelId : (coordinatorModel?.id || '');
-  const orchestration = {
-    mode,
-    providerId,
-    profileId: mode === 'cli' ? profileId : '',
-    modelId,
-    model: coordinatorModel ? { id: coordinatorModel.id, name: coordinatorModel.name, vendor: coordinatorModel.vendor } : null,
-    effort: mode === 'cli' ? String(settings.orchestration?.effort || '').trim() : '',
-    allowedProviders: [...new Set(Array.isArray(settings.orchestration?.allowedProviders) ? settings.orchestration.allowedProviders.map(String) : options.providers.filter(item => (item.canRunInLich && item.cliKind) || item.canRunInVscodeModel || item.canRunCodexAppServer || item.canRunClaudeCode).map(item => item.id))].filter(id => options.providers.some(item => item.id === id && ((item.canRunInLich && item.cliKind) || item.canRunInVscodeModel || item.canRunCodexAppServer || item.canRunClaudeCode))),
-    maxParallel: Math.max(1, Math.min(8, Number(settings.orchestration?.maxParallel) || 2)),
-    maxAttempts: Math.max(1, Math.min(5, Number(settings.orchestration?.maxAttempts) || 3)),
-    budgetLimitUsd: Math.round(Math.max(0, Math.min(100000, Number(settings.orchestration?.budgetLimitUsd) || 0)) * 100) / 100,
-    availableProviders: options.providers.map(item => ({ id: item.id, name: item.name, source: item.source }))
-  };
-  const workerDefaults = resolveWorkerDefaults(options.providers, settings.workerDefaults || {});
-  const next = { build, upstreams, tools, orchestration, workerDefaults, aiMemory };
-  await writeConfiguredAgent(root, orchestration);
-  const target = path.join(ai, 'orchestrator.json');
-  const temporary = `${target}.${randomUUID()}.tmp`;
-  await fs.writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, { flag: 'wx' });
-  await fs.rename(temporary, target);
 }
 
 async function syncUpstreams() {

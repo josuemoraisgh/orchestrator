@@ -572,7 +572,7 @@ class OrchestratorSettingsView {
     function populateAllowedWorkers(orchestration) {
       const root = byId('allowedWorkers');
       root.replaceChildren();
-      const candidates = (state.options?.providers || []).filter(provider => (provider.canRunInLich && provider.cliKind) || provider.canRunInVscodeModel || provider.canRunCodexAppServer || provider.canRunClaudeCode);
+      const candidates = (state.options?.providers || []).filter(provider => provider.canRunInVscodeModel || provider.canRunCodexAppServer || provider.canRunClaudeCode);
       const configured = Array.isArray(orchestration.allowedProviders) ? orchestration.allowedProviders : candidates.map(provider => provider.id);
       if (!candidates.length) {
         const empty = document.createElement('p'); empty.className = 'hint'; empty.textContent = 'Nenhum agente com interface de execução compatível foi detectado.'; root.append(empty); return;
@@ -589,7 +589,7 @@ class OrchestratorSettingsView {
     function populateWorkerProviders(workerDefaults) {
       const select = byId('workerProvider');
       select.replaceChildren();
-      const candidates = (state.options?.providers || []).filter(provider => (provider.canRunInLich && provider.cliKind) || provider.canRunInVscodeModel || provider.canRunCodexAppServer || provider.canRunClaudeCode);
+      const candidates = (state.options?.providers || []).filter(provider => provider.canRunInVscodeModel || provider.canRunCodexAppServer || provider.canRunClaudeCode);
       for (const provider of candidates) {
         const executor = provider.canRunClaudeCode ? 'Claude CLI' : provider.canRunCodexAppServer ? 'Codex app-server' : provider.canRunInVscodeModel ? 'VS Code' : 'CLI compatível';
         select.append(new Option(provider.name + ' — ' + executor, provider.id));
@@ -604,7 +604,7 @@ class OrchestratorSettingsView {
       byId('workerModel').value = workerDefaults.model || '';
       byId('workerEffort').value = workerDefaults.effort || '';
       byId('workerModel').disabled = !selected;
-      byId('workerEffort').disabled = !selected || (!selected.canRunInLich && !selected.canRunCodexAppServer && !selected.canRunClaudeCode);
+      byId('workerEffort').disabled = !selected || (!selected.canRunCodexAppServer && !selected.canRunClaudeCode);
       if (byId('workerModel').disabled) byId('workerModel').value = '';
       if (byId('workerEffort').disabled) byId('workerEffort').value = '';
     }

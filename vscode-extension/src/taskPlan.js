@@ -26,7 +26,7 @@ function parsePlanResponse(text) {
       context: String(handoff.context || '').trim().slice(0, 5000)
     };
     if (!value.runId || value.runId.length > 120 || !ID_PATTERN.test(value.taskId) || !/^[a-z0-9][a-z0-9:._-]{0,119}$/i.test(value.provider)
-      || !['vscode-model', 'codex-app-server', 'claude-code-cli', 'lich-cli'].includes(value.executor) || !value.context) {
+      || !['vscode-model', 'codex-app-server', 'claude-code-cli'].includes(value.executor) || !value.context) {
       throw new Error('O handoff precisa identificar uma tarefa válida, agente autorizado, executor e contexto.');
     }
     return { mode: 'handoff', handoff: value };
@@ -64,6 +64,9 @@ function validatePlan(input) {
     const acceptanceCriteria = Array.isArray(item.acceptanceCriteria)
       ? item.acceptanceCriteria.map(value => String(value).trim()).filter(Boolean).slice(0, 12)
       : [];
+    if (String(item.executor || '').trim() === 'lich-cli') {
+      throw new Error(`A tarefa ${id} não pode iniciar um novo agente pelo adaptador Lich. Escolha um executor nativo disponível.`);
+    }
     const estimatedCostUsd = item.estimatedCostUsd === undefined || item.estimatedCostUsd === null || item.estimatedCostUsd === ''
       ? null
       : Number(item.estimatedCostUsd);
@@ -78,7 +81,7 @@ function validatePlan(input) {
       dependsOn: Array.isArray(item.dependsOn) ? [...new Set(item.dependsOn.map(String))] : [],
       provider: String(item.provider || '').trim(),
       profileId: String(item.profileId || '').trim().slice(0, 120),
-      executor: ['vscode-model', 'codex-app-server', 'claude-code-cli', 'lich-cli', 'auto'].includes(String(item.executor || '').trim()) ? String(item.executor).trim() : 'auto',
+      executor: ['vscode-model', 'codex-app-server', 'claude-code-cli', 'auto'].includes(String(item.executor || '').trim()) ? String(item.executor).trim() : 'auto',
       model: String(item.model || '').trim().slice(0, 160),
       effort: String(item.effort || '').trim().slice(0, 40),
       worktree: String(item.worktree || '').trim().slice(0, 100),

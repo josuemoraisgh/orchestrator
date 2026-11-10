@@ -45,6 +45,21 @@ test('accepts the first-party Codex app-server as a task executor', () => {
   assert.equal(plan.tasks[0].effort, 'high');
 });
 
+test('new plans reject dispatch through the transitional Lich executor', () => {
+  assert.throws(() => validatePlan({
+    title: 'Legacy executor',
+    tasks: [{
+      id: 'legacy-task', title: 'Run a worker', description: 'This plan must use a native adapter.',
+      acceptanceCriteria: ['The task is assigned to a supported native executor.'], provider: 'gemini', executor: 'lich-cli'
+    }]
+  }), /não pode iniciar um novo agente pelo adaptador Lich/i);
+  assert.throws(() => parsePlanResponse(JSON.stringify({
+    mode: 'handoff', handoff: {
+      runId: 'run-1', taskId: 'task-a', provider: 'claude', executor: 'lich-cli', profileId: '', model: '', effort: '', context: 'Continue the task.'
+    }
+  })), /handoff precisa identificar/i);
+});
+
 test('validates and persists a local worktree base branch', () => {
   const plan = validatePlan({
     title: 'Branch base',
