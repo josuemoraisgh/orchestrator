@@ -41,7 +41,9 @@ test('release SBOM records the complete locked runtime closure and bundled licen
     }
     assert.ok(!components.has('@vscode/vsce'), 'development packaging tools must not be listed as runtime components');
     const rootDependencies = bom.dependencies.find(entry => entry.ref === `orchestrator-ai@${bom.metadata.component.version}`);
-    assert.ok(rootDependencies.dependsOn.includes('pkg:github/akitaonrails/ai-memory@3.4.4'));
+    const upstreamReleases = JSON.parse(fs.readFileSync(path.join(root, 'upstream-releases.json'), 'utf8'));
+    const aiMemoryVersion = upstreamReleases.aiMemory.version.replace(/^v/, '');
+    assert.ok(rootDependencies.dependsOn.includes(`pkg:github/akitaonrails/ai-memory@${aiMemoryVersion}`));
     assert.ok(rootDependencies.dependsOn.includes('pkg:npm/ignore@7.0.14'));
     assert.ok(rootDependencies.dependsOn.includes('pkg:npm/proper-lockfile@4.1.2'));
     assert.ok(rootDependencies.dependsOn.includes('pkg:npm/yauzl@3.4.0'));

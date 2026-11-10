@@ -13,15 +13,15 @@
   },
   "aiMemory": {
     "repository": "akitaonrails/ai-memory",
-    "version": "v3.4.4",
-    "releaseUrl": "https://github.com/akitaonrails/ai-memory/releases/tag/v3.4.4",
-    "publishedAt": "2026-11-08T17:38:34Z",
+    "version": "v3.4.5",
+    "releaseUrl": "https://github.com/akitaonrails/ai-memory/releases/tag/v3.4.5",
+    "publishedAt": "2026-11-10T04:03:48Z",
     "windowsX64": {
       "asset": "ai-memory-windows-x86_64.zip",
-      "url": "https://github.com/akitaonrails/ai-memory/releases/download/v3.4.4/ai-memory-windows-x86_64.zip",
-      "sha256": "75844776d9250fd00daa6dd8d5852868163569d3e767daa991bc6e36b2706cce",
-      "sizeBytes": 27024782
+      "url": "https://github.com/akitaonrails/ai-memory/releases/download/v3.4.5/ai-memory-windows-x86_64.zip",
+      "sha256": "2166ba0cdd2e65029bd2350fe256abb97c9dbb7a346d8f588b625ae7527acef3",
+      "sizeBytes": 27147495
     }
   },
-  "generatedAt": "2026-11-09T18:47:14.110Z"
+  "generatedAt": "2026-11-10T11:15:15.317Z"
 }
