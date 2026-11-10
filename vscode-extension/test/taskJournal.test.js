@@ -91,6 +91,17 @@ test('journal search ranks matching task context and remains project-scoped', as
   assert.equal((await journal.search(otherProject, 'Quasar raster decoding')).results.length, 0);
 });
 
+test('journal path-prefix search follows filesystem case sensitivity', async t => {
+  const { journal, project } = await fixture(t);
+  const { run, task } = sample();
+  task.changes = { files: [{ code: 'M', path: 'Source/UpperCase.js' }] };
+  await journal.record(project, run, task, 'task-complete');
+
+  assert.equal((await journal.search(project, 'Quasar raster', { pathPrefix: 'Source/Upper' })).results.length, 1);
+  const caseVariantCount = (await journal.search(project, 'Quasar raster', { pathPrefix: 'source/upper' })).results.length;
+  assert.equal(caseVariantCount, process.platform === 'win32' ? 1 : 0);
+});
+
 test('concurrent session events are retained without overwriting each other', async t => {
   const { journal, project } = await fixture(t);
   const { run, task } = sample();

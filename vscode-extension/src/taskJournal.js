@@ -20,6 +20,11 @@ function normalizedProjectPath(projectRoot) {
   return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
+function normalizedFilePath(filePath) {
+  const normalized = String(filePath || '').replace(/\\/g, '/');
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
 function projectKey(projectRoot) {
   return crypto.createHash('sha256').update(normalizedProjectPath(projectRoot)).digest('hex');
 }
@@ -325,7 +330,7 @@ class TaskJournal {
       provider: String(options.provider || '').toLocaleLowerCase(),
       status: String(options.status || '').toLocaleLowerCase(),
       sessionId: String(options.sessionId || ''),
-      pathPrefix: String(options.pathPrefix || '').replace(/\\/g, '/').toLocaleLowerCase(),
+      pathPrefix: normalizedFilePath(options.pathPrefix),
       attempt: Number.isInteger(Number(options.attempt)) && options.attempt !== undefined ? Number(options.attempt) : 0
     };
     return this.withProject(projectRoot, journal => {
@@ -340,7 +345,7 @@ class TaskJournal {
           if (filters.provider && String(latest.provider || '').toLocaleLowerCase() !== filters.provider) continue;
           if (filters.status && String(latest.status || '').toLocaleLowerCase() !== filters.status) continue;
           if (filters.sessionId && String(latest.sessionId || '') !== filters.sessionId) continue;
-          if (filters.pathPrefix && !(latest.changedFiles || []).some(file => String(file.path || '').replace(/\\/g, '/').toLocaleLowerCase().startsWith(filters.pathPrefix))) continue;
+          if (filters.pathPrefix && !(latest.changedFiles || []).some(file => normalizedFilePath(file.path).startsWith(filters.pathPrefix))) continue;
           const content = [record.runTitle, latest.runPrompt, latest.title, latest.objective,
             ...(latest.acceptanceCriteria || []), latest.result, latest.error, latest.handoff,
             ...(latest.changedFiles || []).map(file => file.path),
