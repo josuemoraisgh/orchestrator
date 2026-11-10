@@ -1,4 +1,5 @@
 const ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,39}$/i;
+const { branchNameIdentity } = require('./pathIdentity');
 
 function parsePlanResponse(text) {
   const source = String(text || '').trim();
@@ -110,7 +111,7 @@ function validatePlan(input) {
   const worktreeOwners = new Map();
   for (const task of tasks) {
     if (!task.worktree) continue;
-    const branchKey = task.worktree.replace(/[^A-Za-z0-9._/-]+/g, '-').slice(0, 100).toLowerCase();
+    const branchKey = branchNameIdentity(task.worktree.replace(/[^A-Za-z0-9._/-]+/g, '-').slice(0, 100));
     const owner = worktreeOwners.get(branchKey);
     if (owner && !dependsOnTransitively(task.id, owner.id) && !dependsOnTransitively(owner.id, task.id)) {
       throw new Error(`As tarefas ${owner.id} e ${task.id} poderiam executar em paralelo na mesma worktree (${task.worktree}). Use nomes distintos ou declare a dependência entre elas.`);

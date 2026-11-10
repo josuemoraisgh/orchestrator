@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const ignore = require('ignore');
+const { pathIdentity: normalizedPath, branchNameIdentity: branchNameKey } = require('./pathIdentity');
 
 const MAX_INCLUDED_FILES = 250;
 const MAX_INCLUDED_FILE_BYTES = 64 * 1024 * 1024;
@@ -39,17 +40,6 @@ function parseWorktrees(output) {
 function safePart(value) {
   const cleaned = String(value || '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
   return cleaned || 'task';
-}
-
-function normalizedPath(value, platform = process.platform) {
-  const pathApi = platform === 'win32' ? path.win32 : path.posix;
-  const resolved = pathApi.resolve(String(value || '')).replace(/\\/g, '/');
-  return platform === 'win32' ? resolved.toLowerCase() : resolved;
-}
-
-function branchNameKey(value, platform = process.platform) {
-  const branch = String(value || '').replace(/^refs\/heads\//, '');
-  return platform === 'win32' ? branch.toLowerCase() : branch;
 }
 
 function includePatternMatches(relativePath, pattern) {

@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const lockfile = require('proper-lockfile');
+const { pathIdentity: normalizedPath } = require('./pathIdentity');
 
 const LOCK_OPTIONS = {
   realpath: false,
@@ -18,12 +19,6 @@ function sharedUserStoragePath(fallbackPath) {
   if (process.platform === 'win32') return path.join(os.tmpdir(), 'Orchestrator-AI');
   if (os.homedir()) return path.join(os.homedir(), '.local', 'share', 'orchestrator-ai');
   return fallbackPath;
-}
-
-function normalizedPath(value, platform = process.platform) {
-  const pathApi = platform === 'win32' ? path.win32 : path.posix;
-  const resolved = pathApi.resolve(String(value || '')).replace(/\\/g, '/');
-  return platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
 function sessionIdOf(session) {

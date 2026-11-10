@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { createClaudePermissionServer } = require('./claudePermissionServer');
+const { pathIdentity } = require('./pathIdentity');
 
 function deferred() {
   let resolve;
@@ -28,7 +29,7 @@ class ClaudeCodeSessions {
     const approvals = await createClaudePermissionServer({ root: request.root, requestApproval: request.requestApproval });
     const configPath = path.join(directory, 'mcp.json');
     const nodeExecutable = request.nodeExecutable || process.execPath;
-    const useElectronNode = Boolean(process.versions.electron) && path.resolve(nodeExecutable).toLowerCase() === path.resolve(process.execPath).toLowerCase();
+    const useElectronNode = Boolean(process.versions.electron) && pathIdentity(nodeExecutable) === pathIdentity(process.execPath);
     const config = {
       mcpServers: {
         orchestrator_permissions: {

@@ -28,6 +28,7 @@ const { resolveCoordinatorSettingsMode } = require('./coordinatorReadiness');
 const { recoverConfiguredCoordinatorProfile } = require('./coordinatorProfileRecovery');
 const { resolveUpstreamDirectory } = require('./upstreamPaths');
 const { sharedUserStoragePath } = require('./sharedTaskSlots');
+const { pathIdentity, branchNameIdentity } = require('./pathIdentity');
 const { normalizeLichStartDelivery, normalizeLichWaitOutcome } = require('./lichDelivery');
 const { loadProjectGuidance } = require('./projectGuidance');
 const { upstreamSyncInvocation } = require('./upstreamSyncInvocation');
@@ -406,7 +407,7 @@ async function ensureLichCheckoutAvailable(executable, root, worktreeName, known
     } else {
       const worktrees = parseCommandJson(worktreesResult.stdout || '[]', 'lich worktrees --json');
       if (!Array.isArray(worktrees)) throw new Error('lich worktrees --json não retornou uma lista; início bloqueado para evitar conflito de checkout.');
-      const existing = worktrees.find(item => typeof item.name === 'string' && item.name.toLowerCase() === worktreeName.toLowerCase());
+      const existing = worktrees.find(item => typeof item.name === 'string' && branchNameIdentity(item.name) === branchNameIdentity(worktreeName));
       if (existing) {
         if (typeof existing.path !== 'string' || !existing.path) throw new Error(`O Lich encontrou a worktree ${worktreeName}, mas não informou seu caminho; escolha outra worktree ou verifique a sessão manualmente.`);
         targetPath = path.resolve(existing.path);
@@ -414,7 +415,7 @@ async function ensureLichCheckoutAvailable(executable, root, worktreeName, known
     }
   }
   if (!targetPath) return;
-  const normalize = value => typeof value === 'string' && value ? path.resolve(value).toLowerCase() : '';
+  const normalize = value => typeof value === 'string' && value ? pathIdentity(value) : '';
   const occupied = sessions.filter(session => normalize(session.path) === normalize(targetPath));
   if (occupied.length) {
     const details = occupied.map(session => `${session.label || session.name || session.id || 'sessão sem nome'}${session.state ? ` (${session.state})` : ''}`).join(', ');
@@ -491,7 +492,7 @@ async function loadProjectKnowledgePage(context, memoryRuntime, pagePath) {
 async function patchProjectKnowledgePage(context, memoryRuntime, loaded, edit) {
   requireTrustedWorkspace('Editar uma página durável do AI Memory');
   const root = workspaceRoot();
-  if (!root || path.resolve(root).toLowerCase() !== path.resolve(loaded.root).toLowerCase()) {
+  if (!root || pathIdentity(root) !== pathIdentity(loaded.root)) {
     throw new Error('O workspace mudou desde que a página foi carregada. Carregue a página novamente no projeto atual.');
   }
   const config = await readProjectConfigOptional();
@@ -508,7 +509,7 @@ async function patchProjectKnowledgePage(context, memoryRuntime, loaded, edit) {
 async function updateProjectKnowledgeMetadata(context, memoryRuntime, loaded, changes) {
   requireTrustedWorkspace('Atualizar metadados duráveis do AI Memory');
   const root = workspaceRoot();
-  if (!root || path.resolve(root).toLowerCase() !== path.resolve(loaded.root).toLowerCase()) {
+  if (!root || pathIdentity(root) !== pathIdentity(loaded.root)) {
     throw new Error('O workspace mudou desde que a página foi carregada. Carregue-a novamente no projeto atual.');
   }
   const config = await readProjectConfigOptional();
@@ -958,7 +959,7 @@ async function startPlannedLichTask(context, input, taskJournal, memoryRuntime) 
     const canonicalRoots = resolvedWorktree.code === 0
       ? await Promise.all([fs.realpath(resolvedWorktree.stdout).catch(() => ''), fs.realpath(sessionRoot).catch(() => '')])
       : ['', ''];
-    if (!canonicalRoots[0] || canonicalRoots[0].toLowerCase() !== canonicalRoots[1].toLowerCase()) {
+    if (!canonicalRoots[0] || pathIdentity(canonicalRoots[0]) !== pathIdentity(canonicalRoots[1])) {
       throw new Error('O checkout preservado da tarefa não foi confirmado como a raiz de uma worktree Git; handoff bloqueado.');
     }
   }

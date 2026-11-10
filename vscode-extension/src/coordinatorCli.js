@@ -2,6 +2,7 @@ const cp = require('node:child_process');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { pathIdentity } = require('./pathIdentity');
 
 function profileHome(profile, storageRoot) {
   if (!profile?.isolated) return '';
@@ -177,7 +178,7 @@ async function checkProfileAuthentication(profile, provider, storageRoot, cwd) {
       try {
         const status = JSON.parse(result.stdout);
         if (status.loggedIn !== true) return { status: 'missing', checkedAt: Date.now(), text: `${provider.name}: este perfil não está autenticado.` };
-        if (profile.isolated && (!status.configDirectory || path.resolve(status.configDirectory).toLowerCase() !== path.resolve(profileHome(profile, storageRoot)).toLowerCase())) {
+        if (profile.isolated && (!status.configDirectory || pathIdentity(status.configDirectory) !== pathIdentity(profileHome(profile, storageRoot)))) {
           return { status: 'unverified', checkedAt: Date.now(), text: `${provider.name}: a CLI não confirmou o diretório de autenticação isolado deste perfil.` };
         }
       } catch { return { status: 'unverified', checkedAt: Date.now(), text: `${provider.name}: a CLI não confirmou o estado deste perfil.` }; }

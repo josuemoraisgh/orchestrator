@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const net = require('node:net');
 const path = require('node:path');
 const lockfile = require('proper-lockfile');
+const { pathIdentity } = require('./pathIdentity');
 
 const LOCK_OPTIONS = { realpath: false, stale: 15000, update: 3000, retries: { retries: 80, minTimeout: 25, maxTimeout: 125 } };
 
@@ -89,7 +90,7 @@ class AiMemoryRuntime {
       let current;
       try { current = JSON.parse(await fs.readFile(this.endpointPath, 'utf8')); }
       catch { current = undefined; }
-      if (current?.port && current?.dataDirectory && path.resolve(current.dataDirectory).toLowerCase() === this.dataDirectory.toLowerCase()
+      if (current?.port && current?.dataDirectory && pathIdentity(current.dataDirectory) === pathIdentity(this.dataDirectory)
         && processAlive(current.pid) && await this.healthy(current.port)) {
         return { executable, dataDirectory: this.dataDirectory, configPath: this.configPath, url: `http://127.0.0.1:${current.port}`, version: current.version || 'unknown', ownerPid: current.pid };
       }

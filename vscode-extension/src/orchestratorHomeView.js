@@ -12,6 +12,7 @@ const { reconcileHandoffRecovery, restoreHandoffSession } = require('./handoffRe
 const { createContinuityAnchor, buildContinuityContext, sanitizeThreadForStorage } = require('./chatContinuity');
 const { resolveCoordinatorCli } = require('./coordinatorReadiness');
 const { validateAddedDiffLocation } = require('./diffReview');
+const { pathIdentity, branchNameIdentity } = require('./pathIdentity');
 const { modelAccessStatus, modelAccessLabel } = require('./modelAccess');
 const { isProcessAlive } = require('./taskJournal');
 
@@ -1689,9 +1690,10 @@ class OrchestratorHomeView {
     const run = runs.find(item => item.id === runId);
     const task = run?.tasks.find(item => item.id === taskId);
     if (!run || !task) return;
-    const branchName = item => (item.worktree || `orchestrator/${String(run.id).slice(0, 8)}-${item.id}`).replace(/[^A-Za-z0-9._/-]+/g, '-').slice(0, 100).toLowerCase();
-    const checkoutKey = canIsolate ? branchName(task) : `project:${String(workspace || '').toLowerCase()}`;
-    const predecessors = run.tasks.filter(item => item.id !== task.id && item.status === 'complete' && item.sessionId && (canIsolate ? branchName(item) : `project:${String(workspace || '').toLowerCase()}`) === checkoutKey);
+    const branchName = item => branchNameIdentity((item.worktree || `orchestrator/${String(run.id).slice(0, 8)}-${item.id}`).replace(/[^A-Za-z0-9._/-]+/g, '-').slice(0, 100));
+    const projectCheckoutKey = workspace ? `project:${pathIdentity(workspace)}` : 'project:';
+    const checkoutKey = canIsolate ? branchName(task) : projectCheckoutKey;
+    const predecessors = run.tasks.filter(item => item.id !== task.id && item.status === 'complete' && item.sessionId && (canIsolate ? branchName(item) : projectCheckoutKey) === checkoutKey);
     for (const previous of predecessors) {
       const previousSessionId = previous.sessionId;
       await this.taskActions.stop({ session: previousSessionId, projectPath: previous.projectPath || workspace, worktreePath: previous.worktreePath || workspace });

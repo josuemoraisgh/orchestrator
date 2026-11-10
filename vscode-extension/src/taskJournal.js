@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const lockfile = require('proper-lockfile');
 const { redactSensitiveText } = require('./secretRedaction');
+const { pathIdentity, normalizePathValue } = require('./pathIdentity');
 
 const LOCK_OPTIONS = {
   realpath: false,
@@ -16,13 +17,11 @@ const MAX_RESULT_CHARS = 12000;
 const MAX_TASK_EVENTS = 240;
 
 function normalizedProjectPath(projectRoot) {
-  const resolved = path.resolve(String(projectRoot || '')).replace(/\\/g, '/');
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  return pathIdentity(projectRoot);
 }
 
 function normalizedFilePath(filePath) {
-  const normalized = String(filePath || '').replace(/\\/g, '/');
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  return normalizePathValue(filePath);
 }
 
 function projectKey(projectRoot) {
