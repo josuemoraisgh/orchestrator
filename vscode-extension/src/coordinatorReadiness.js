@@ -1,5 +1,22 @@
 'use strict';
 
+function resolveCoordinatorSettingsMode(providerId, profileId, providers = []) {
+  const selectedProviderId = String(providerId || '');
+  const requestedProfileId = String(profileId || '');
+  const selectedProvider = providers.find(item => item.id === selectedProviderId && item.canCoordinateInOrchestratorChat);
+  const cliProvider = providers.find(item => item.id === selectedProviderId && item.canCoordinateWithCli);
+  if (selectedProviderId && !selectedProvider && !cliProvider) {
+    throw new Error('Escolha um modelo do VS Code ou um perfil CLI autorizado para o coordenador.');
+  }
+  const mode = cliProvider ? 'cli' : 'vscode';
+  return {
+    mode,
+    selectedProvider,
+    // Retain a missing ID so the chat can offer its verified recovery flow.
+    profileId: mode === 'cli' ? requestedProfileId : ''
+  };
+}
+
 function resolveCoordinatorCli(orchestration = {}, profiles = [], providers = []) {
   if (orchestration.mode !== 'cli') return { ready: false, recoverable: false, profile: undefined, provider: undefined, message: '' };
 
@@ -50,4 +67,4 @@ function resolveCoordinatorCli(orchestration = {}, profiles = [], providers = []
   return { ready: true, recoverable: false, profile, provider, message: '' };
 }
 
-module.exports = { resolveCoordinatorCli };
+module.exports = { resolveCoordinatorCli, resolveCoordinatorSettingsMode };

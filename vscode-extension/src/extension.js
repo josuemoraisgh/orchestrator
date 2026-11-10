@@ -24,6 +24,7 @@ const { extensionStoragePath } = require('./extensionStorage');
 const { canAutoInstallWorkspaceTools } = require('./workspaceReadiness');
 const { ensureManagedAiMemory } = require('./managedRuntimeSetup');
 const { resolveWorkerDefaults } = require('./workerDefaults');
+const { resolveCoordinatorSettingsMode } = require('./coordinatorReadiness');
 const { recoverConfiguredCoordinatorProfile } = require('./coordinatorProfileRecovery');
 const { resolveUpstreamDirectory } = require('./upstreamPaths');
 const { sharedUserStoragePath } = require('./sharedTaskSlots');
@@ -1566,13 +1567,7 @@ async function saveProjectSettings(context, settings) {
   if (aiMemory.workspace && (!scopePattern.test(aiMemory.workspace) || !scopePattern.test(aiMemory.project))) throw new Error('Workspace e project devem usar letras minúsculas, números, ponto, hífen ou sublinhado.');
   const options = await listOrchestrationOptions();
   const providerId = String(settings.orchestration?.providerId || '');
-  const selectedProvider = options.providers.find(item => item.id === providerId && item.canCoordinateInOrchestratorChat);
-  const cliProvider = options.providers.find(item => item.id === providerId && item.canCoordinateWithCli);
-  const profileId = String(settings.orchestration?.profileId || '');
-  const selectedProfile = coordinatorProfiles(context).find(item => item.id === profileId && item.providerId === providerId && item.authorized);
-  const mode = cliProvider && selectedProfile ? 'cli' : 'vscode';
-  if (providerId && mode === 'vscode' && !selectedProvider) throw new Error('Escolha um modelo do VS Code ou um perfil CLI autorizado para o coordenador.');
-  if (cliProvider && !selectedProfile) throw new Error('Selecione um perfil Codex/Claude cadastrado e autorizado para o coordenador.');
+  const { mode, selectedProvider, profileId } = resolveCoordinatorSettingsMode(providerId, settings.orchestration?.profileId, options.providers);
   const requestedModelId = String(settings.orchestration?.modelId || '').trim();
   const selectedModel = selectedProvider?.models.find(item => item.id === requestedModelId);
   if (mode === 'vscode' && requestedModelId && !selectedModel) throw new Error(`O modelo ${requestedModelId} não está publicado pela API do VS Code para ${selectedProvider?.name || providerId}. Selecione um modelo detectado.`);
@@ -1581,7 +1576,7 @@ async function saveProjectSettings(context, settings) {
   const orchestration = {
     mode,
     providerId,
-    profileId: mode === 'cli' ? selectedProfile.id : '',
+    profileId: mode === 'cli' ? profileId : '',
     modelId,
     model: coordinatorModel ? { id: coordinatorModel.id, name: coordinatorModel.name, vendor: coordinatorModel.vendor } : null,
     effort: mode === 'cli' ? String(settings.orchestration?.effort || '').trim() : '',

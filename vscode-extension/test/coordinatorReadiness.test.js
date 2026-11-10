@@ -2,11 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveCoordinatorCli } = require('../src/coordinatorReadiness');
+const { resolveCoordinatorCli, resolveCoordinatorSettingsMode } = require('../src/coordinatorReadiness');
 
 const providers = [
-  { id: 'claude', name: 'Claude', canCoordinateWithCli: true },
-  { id: 'codex', name: 'Codex', canCoordinateWithCli: true },
+  { id: 'claude', name: 'Claude', canCoordinateWithCli: true, canCoordinateInOrchestratorChat: false },
+  { id: 'codex', name: 'Codex', canCoordinateWithCli: true, canCoordinateInOrchestratorChat: false },
   { id: 'gemini', name: 'Gemini', canCoordinateWithCli: false }
 ];
 const profiles = [
@@ -14,6 +14,25 @@ const profiles = [
   { id: 'claude-disabled', providerId: 'claude', name: 'Claude pausado', authorized: false },
   { id: 'codex-main', providerId: 'codex', name: 'Codex principal', authorized: true }
 ];
+
+test('saving a CLI coordinator selection does not require a profile to be registered first', () => {
+  const result = resolveCoordinatorSettingsMode('claude', 'old-claude-id', providers);
+  assert.equal(result.mode, 'cli');
+  assert.equal(result.selectedProvider, undefined);
+  assert.equal(result.profileId, 'old-claude-id');
+});
+
+test('coordinator settings still reject a provider with no supported coordinator interface', () => {
+  assert.throws(() => resolveCoordinatorSettingsMode('gemini', '', providers), /Escolha um modelo do VS Code/);
+});
+
+test('coordinator settings select a provider published by the VS Code Language Model API', () => {
+  const modelProvider = { id: 'vscode:vendor', name: 'Vendor', canCoordinateInOrchestratorChat: true };
+  const result = resolveCoordinatorSettingsMode(modelProvider.id, '', [...providers, modelProvider]);
+  assert.equal(result.mode, 'vscode');
+  assert.equal(result.selectedProvider, modelProvider);
+  assert.equal(result.profileId, '');
+});
 
 test('CLI coordinator is ready only when the matching provider and authorized profile exist', () => {
   const result = resolveCoordinatorCli({ mode: 'cli', providerId: 'claude', profileId: 'claude-main' }, profiles, providers);
